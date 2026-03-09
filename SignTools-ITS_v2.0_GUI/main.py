@@ -22,7 +22,7 @@ __company__   = "polsoft.ITS™ Group"
 __email__     = "polsoft.its@fastservice.com"
 __github__    = "https://github.com/seb07uk"
 __copyright__ = "2026© polsoft.ITS™. All rights reserved."
-__version__   = "2.0"
+__version__   = "2.0.1"  # Bug-fix: hardcoded PL strings → t(); redundant var removed
 __license__   = "Proprietary"
 
 import tkinter as tk
@@ -384,6 +384,18 @@ _TR = {
                                 "en": "signtool.exe availability indicator (green = found)"},
     "tip_led_openssl":         {"pl": "Wskaznik dostepnosci openssl.exe (zielony = znaleziony)",
                                 "en": "openssl.exe availability indicator (green = found)"},
+    # ── Validation error messages (hardcoded strings — fixed in v2.0.1) ─────────
+    "err_country_code":    {"pl": "Kod kraju musi składać się z dokładnie 2 liter (np. PL, US).",
+                            "en": "Country code must be exactly 2 letters (e.g. PL, US)."},
+    "err_cert_validity":   {"pl": "Ważność certyfikatu musi być dodatnią liczbą całkowitą (dni).",
+                            "en": "Certificate validity must be a positive integer (days)."},
+    "err_email_invalid":   {"pl": "Podany adres e-mail jest nieprawidłowy.",
+                            "en": "The provided e-mail address is invalid."},
+    "err_sha1_len":        {"pl": "SHA1 certyfikatu musi mieć dokładnie 40 znaków szesnastkowych.",
+                            "en": "Certificate SHA1 must be exactly 40 hexadecimal characters."},
+    "err_ts_url":          {"pl": "URL serwera timestamp musi zaczynać się od http:// lub https://",
+                            "en": "Timestamp server URL must start with http:// or https://"},
+    "err_validation":      {"pl": "Błąd walidacji", "en": "Validation error"},
 }
 
 
@@ -4775,7 +4787,7 @@ class SignToolGUI:
         # Walidacja pola Kraj (musi mieć 2 litery)
         country = self.certgen_country.get().strip()
         if country and (len(country) != 2 or not country.isalpha()):
-            messagebox.showerror("Błąd walidacji", "Kod kraju musi składać się z dokładnie 2 liter (np. PL, US).")
+            messagebox.showerror(t("err_validation"), t("err_country_code"))
             return
 
         # Walidacja liczby dni (musi być dodatnią liczbą całkowitą)
@@ -4785,13 +4797,13 @@ class SignToolGUI:
             if days_int <= 0:
                 raise ValueError
         except ValueError:
-            messagebox.showerror("Błąd walidacji", "Ważność certyfikatu musi być dodatnią liczbą całkowitą (dni).")
+            messagebox.showerror(t("err_validation"), t("err_cert_validity"))
             return
 
         # Walidacja e-maila (podstawowa)
         email = self.certgen_email.get().strip()
         if email and "@" not in email:
-            messagebox.showerror("Błąd walidacji", "Podany adres e-mail jest nieprawidłowy.")
+            messagebox.showerror(t("err_validation"), t("err_email_invalid"))
             return
 
         method = self.certgen_method.get()
@@ -5018,13 +5030,13 @@ class SignToolGUI:
         # Walidacja SHA1 (musi być 40 hex znaków jeśli podane)
         sha1_val = self.sign_cert_sha1.get().strip()
         if sha1_val and (len(sha1_val) != 40 or not all(c in '0123456789abcdefABCDEF' for c in sha1_val)):
-            messagebox.showerror("Błąd walidacji", "SHA1 certyfikatu musi mieć dokładnie 40 znaków szesnastkowych.")
+            messagebox.showerror(t("err_validation"), t("err_sha1_len"))
             return None
 
         # Walidacja URL timestampu
         ts_url = self.sign_timestamp.get().strip()
         if ts_url and not (ts_url.startswith("http://") or ts_url.startswith("https://")):
-            messagebox.showerror("Błąd walidacji", "URL serwera timestamp musi zaczynać się od http:// lub https://")
+            messagebox.showerror(t("err_validation"), t("err_ts_url"))
             return None
 
         cmd = [self.signtool_path, "sign"]
@@ -5374,9 +5386,7 @@ class SignToolGUI:
         batch_tmp_path = os.path.join(APP_DIR, "_batch_response.txt")
         with open(batch_tmp_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        temp_file = batch_tmp_path
-
-        cmd = [self.signtool_path, f"@{temp_file}"]
+        cmd = [self.signtool_path, f"@{batch_tmp_path}"]
         self._setup_output_tags(self.batch_output)
 
         def run_and_cleanup():
@@ -5426,7 +5436,7 @@ class SignToolGUI:
             finally:
                 # Delete temp file only after process ends (fix race condition)
                 try:
-                    os.unlink(temp_file)
+                    os.unlink(batch_tmp_path)
                 except Exception as _e:
                     pass
 

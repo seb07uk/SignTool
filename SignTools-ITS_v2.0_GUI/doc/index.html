@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignTool's-ITS GUI v2.0 — polsoft.ITS™</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --accent3: #93c5fd;
+    --green: #22d3a0;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #0d1117;
+    --radius: 8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HERO GLOW ── */
+  .hero-glow {
+    position: absolute;
+    width: 900px; height: 400px;
+    background: radial-gradient(ellipse, rgba(59,130,246,.18) 0%, transparent 70%);
+    top: -80px; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,14,26,.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 clamp(20px, 5vw, 80px);
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 15px;
+    color: var(--accent2);
+    letter-spacing: .02em;
+  }
+  .nav-brand span { color: var(--muted); font-weight: 300; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links a {
+    font-size: 13px; font-weight: 600; text-decoration: none;
+    color: var(--muted); letter-spacing: .06em; text-transform: uppercase;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--accent2); }
+
+  /* ── LANG SWITCHER ── */
+  .lang-btn {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 4px;
+    cursor: pointer;
+  }
+  .lang-opt {
+    padding: 4px 14px;
+    border-radius: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .2s;
+    user-select: none;
+  }
+  .lang-opt.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(59,130,246,.4);
+  }
+
+  /* ── MAIN ── */
+  main { position: relative; z-index: 1; }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    padding: clamp(80px,12vw,140px) clamp(20px,5vw,80px) clamp(60px,8vw,100px);
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(59,130,246,.12);
+    border: 1px solid rgba(59,130,246,.3);
+    border-radius: 40px;
+    padding: 6px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--accent3);
+    margin-bottom: 32px;
+    letter-spacing: .04em;
+  }
+  .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+  h1 {
+    font-size: clamp(38px, 7vw, 80px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -.02em;
+    margin-bottom: 16px;
+  }
+  h1 .accent { color: var(--accent); }
+  h1 .dim { color: var(--muted); font-weight: 400; }
+
+  .hero-sub {
+    font-size: clamp(15px,2vw,18px);
+    color: var(--muted);
+    max-width: 560px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--accent);
+    color: #fff; font-weight: 700; font-size: 14px;
+    padding: 14px 28px; border-radius: var(--radius);
+    text-decoration: none; letter-spacing: .04em;
+    transition: all .2s;
+    box-shadow: 0 0 24px rgba(59,130,246,.3);
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,.4); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text); font-weight: 600; font-size: 14px;
+    padding: 14px 28px; border-radius: var(--radius);
+    text-decoration: none; letter-spacing: .04em;
+    transition: all .2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent2); transform: translateY(-2px); }
+
+  /* ── TERMINAL MOCK ── */
+  .terminal-wrap {
+    max-width: 680px; margin: 64px auto 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 32px 80px rgba(0,0,0,.6);
+  }
+  .term-bar {
+    background: #1c2333;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .term-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-left: 8px; }
+  .term-body {
+    background: var(--code-bg);
+    padding: 24px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 2;
+  }
+  .term-line { display: block; }
+  .tc-prompt { color: var(--green); }
+  .tc-cmd { color: var(--accent2); }
+  .tc-flag { color: var(--yellow); }
+  .tc-val { color: #a78bfa; }
+  .tc-file { color: #f97316; }
+  .tc-ok { color: var(--green); }
+  .tc-err { color: var(--red); }
+  .tc-dim { color: var(--muted); }
+
+  /* ── SECTION ── */
+  section {
+    padding: clamp(60px,8vw,100px) clamp(20px,5vw,80px);
+    max-width: 1200px; margin: 0 auto;
+  }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  h2 {
+    font-size: clamp(26px,4vw,42px);
+    font-weight: 800; letter-spacing: -.02em;
+    margin-bottom: 16px;
+  }
+  .section-desc {
+    font-size: 16px; color: var(--muted); max-width: 520px;
+    line-height: 1.7; margin-bottom: 48px;
+  }
+
+  /* ── FEATURE GRID ── */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .feat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    transition: all .25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0; transition: opacity .25s;
+  }
+  .feat-card:hover { border-color: rgba(59,130,246,.4); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+  .feat-card:hover::before { opacity: 1; }
+  .feat-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: rgba(59,130,246,.12);
+    border: 1px solid rgba(59,130,246,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 16px;
+  }
+  .feat-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .feat-desc { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+  /* ── TABS SECTION ── */
+  .tabs-container { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .tab-bar { display: flex; background: var(--surface2); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-item {
+    padding: 14px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all .2s;
+    flex-shrink: 0;
+  }
+  .tab-item.active { color: var(--accent2); border-bottom-color: var(--accent); background: rgba(59,130,246,.05); }
+  .tab-item:hover:not(.active) { color: var(--text); }
+  .tab-content { padding: 32px; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  .tab-pane h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--accent2); }
+  .tab-pane p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .tag {
+    background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.2);
+    color: var(--accent3); font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; padding: 4px 10px; border-radius: 4px;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 0 clamp(20px,5vw,80px);
+  }
+
+  /* ── REQUIREMENTS TABLE ── */
+  .req-table { width: 100%; border-collapse: collapse; }
+  .req-table th {
+    text-align: left; padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--border);
+  }
+  .req-table td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid rgba(30,45,69,.5); }
+  .req-table tr:last-child td { border-bottom: none; }
+  .req-table tr:hover td { background: rgba(59,130,246,.03); }
+  .req-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent3); font-weight: 600; }
+  .req-table td:last-child { color: var(--muted); }
+
+  /* ── INSTALL CARD ── */
+  .install-card {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .install-header {
+    padding: 12px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .install-header span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--muted);
+  }
+  .install-body {
+    padding: 24px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 2;
+  }
+  .install-body .comment { color: var(--muted); }
+  .install-body .cmd { color: var(--green); }
+  .install-body .arg { color: var(--accent3); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px clamp(20px,5vw,80px);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 20px;
+  }
+  .footer-brand { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); }
+  .footer-brand strong { color: var(--accent2); }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a { font-size: 12px; color: var(--muted); text-decoration: none; font-weight: 600; letter-spacing: .04em; transition: color .2s; }
+  .footer-links a:hover { color: var(--accent2); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .hero-actions { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">SignTool's<span>-ITS</span> GUI <span>v2.0</span></div>
+  <div class="nav-right">
+    <ul class="nav-links">
+      <li><a href="#features" data-i18n="nav_features">Features</a></li>
+      <li><a href="#tabs" data-i18n="nav_modules">Modules</a></li>
+      <li><a href="#install" data-i18n="nav_install">Install</a></li>
+      <li><a href="#requirements" data-i18n="nav_requirements">Requirements</a></li>
+    </ul>
+    <div class="lang-btn" onclick="toggleLang()">
+      <div class="lang-opt" id="lang-en" onclick="setLang('en')">EN</div>
+      <div class="lang-opt" id="lang-pl" onclick="setLang('pl')">PL</div>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" style="max-width:100%;padding-bottom:0">
+  <div class="hero-glow"></div>
+  <div class="hero-badge">
+    <span class="dot"></span>
+    <span data-i18n="badge">polsoft.ITS™ Group &nbsp;·&nbsp; v2.0</span>
+  </div>
+  <h1>
+    <span class="accent">SignTool's-ITS</span><br>
+    <span class="dim" data-i18n="h1_sub">Code Signing GUI</span>
+  </h1>
+  <p class="hero-sub" data-i18n="hero_desc">
+    Graphical interface for Microsoft SignTool &amp; OpenSSL. Sign, timestamp, verify and generate certificates — all from one window, no command line required.
+  </p>
+  <div class="hero-actions">
+    <a href="https://github.com/seb07uk" class="btn-primary" target="_blank">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+    <a href="#install" class="btn-secondary" data-i18n="btn_quickstart">Quick Start</a>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="terminal-wrap" style="margin-top:60px;max-width:680px;margin-left:auto;margin-right:auto">
+    <div class="term-bar">
+      <div class="term-dot" style="background:#ff5f57"></div>
+      <div class="term-dot" style="background:#ffbd2e"></div>
+      <div class="term-dot" style="background:#28c840"></div>
+      <span class="term-title">signtool.exe — output</span>
+    </div>
+    <div class="term-body">
+      <span class="term-line"><span class="tc-prompt">❯ </span><span class="tc-cmd">signtool</span> <span class="tc-flag">sign</span> <span class="tc-flag">/n</span> <span class="tc-val">"polsoft.ITS™"</span> <span class="tc-flag">/fd</span> <span class="tc-val">SHA256</span></span>
+      <span class="term-line"><span class="tc-dim">      </span><span class="tc-flag">/tr</span> <span class="tc-val">http://timestamp.sectigo.com</span> <span class="tc-flag">/td</span> <span class="tc-val">SHA256</span></span>
+      <span class="term-line"><span class="tc-dim">      </span><span class="tc-file">C:\Release\app.exe</span></span>
+      <span class="term-line"> </span>
+      <span class="term-line"><span class="tc-dim">Done Adding Additional Store</span></span>
+      <span class="term-line"><span class="tc-ok">Successfully signed: C:\Release\app.exe</span></span>
+      <span class="term-line"> </span>
+      <span class="term-line"><span class="tc-dim">Number of files successfully Signed: </span><span class="tc-ok">1</span></span>
+      <span class="term-line"><span class="tc-dim">Number of warnings: </span><span class="tc-ok">0</span></span>
+      <span class="term-line"><span class="tc-dim">Number of errors: </span><span class="tc-ok">0</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- DIVIDER -->
+<div class="divider" style="margin-top:80px"></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <p class="section-label" data-i18n="sec_feat_label">Capabilities</p>
+  <h2 data-i18n="sec_feat_title">Everything in one window</h2>
+  <p class="section-desc" data-i18n="sec_feat_desc">Complete code-signing workflow with auto-detection of tools, bilingual interface, and colour-coded real-time output.</p>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">🔒</div>
+      <div class="feat-title" data-i18n="f1_title">Code Signing</div>
+      <div class="feat-desc" data-i18n="f1_desc">Sign EXE, DLL, scripts using a certificate from the Windows store or a PFX file. Supports SHA-256, SHA-512, dual signing (/as) and debug mode.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⏱️</div>
+      <div class="feat-title" data-i18n="f2_title">Timestamp</div>
+      <div class="feat-desc" data-i18n="f2_desc">Add RFC3161 (modern, recommended) or Authenticode (legacy) timestamps to already-signed files. Configurable server and hash algorithm.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✅</div>
+      <div class="feat-title" data-i18n="f3_title">Signature Verify</div>
+      <div class="feat-desc" data-i18n="f3_desc">Verify all signatures (/pa) or page signatures (/pg) against optional catalog files. Colour-coded pass/fail output.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🗄️</div>
+      <div class="feat-title" data-i18n="f4_title">CatDB & Remove</div>
+      <div class="feat-desc" data-i18n="f4_desc">Add or remove catalog files from the Windows catalog database. Strip Authenticode signatures from binaries in bulk.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📋</div>
+      <div class="feat-title" data-i18n="f5_title">Batch Mode</div>
+      <div class="feat-desc" data-i18n="f5_desc">Built-in response file editor. Load, edit, and execute signtool batch jobs directly — one argument per line, first line is the command.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔑</div>
+      <div class="feat-title" data-i18n="f6_title">Certificate Generator</div>
+      <div class="feat-desc" data-i18n="f6_desc">Generate self-signed, Root CA or CA-signed certificates via OpenSSL or PowerShell. RSA / EC keys, SAN, PFX export, Windows store install.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🌐</div>
+      <div class="feat-title" data-i18n="f7_title">Bilingual UI</div>
+      <div class="feat-desc" data-i18n="f7_desc">Full Polish / English interface switchable at runtime. No restart required. Built-in translation system with no external dependencies.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <div class="feat-title" data-i18n="f8_title">Auto-Detection</div>
+      <div class="feat-desc" data-i18n="f8_desc">Scans all drives at startup for signtool.exe and openssl.exe. Summary dialog shows found paths; missing tools can be located manually.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🧵</div>
+      <div class="feat-title" data-i18n="f9_title">Non-blocking Execution</div>
+      <div class="feat-desc" data-i18n="f9_desc">All operations run in daemon threads. Output streams line-by-line into the GUI. No frozen window, no console flash on Windows.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TABS / MODULES -->
+<section id="tabs">
+  <p class="section-label" data-i18n="sec_mod_label">Application Modules</p>
+  <h2 data-i18n="sec_mod_title">Seven tabs, one workflow</h2>
+  <p class="section-desc" data-i18n="sec_mod_desc">Each tab focuses on a specific task. Navigate freely — all settings persist within the session.</p>
+
+  <div class="tabs-container">
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchTab(0)" data-i18n="tab0">Sign</div>
+      <div class="tab-item" onclick="switchTab(1)" data-i18n="tab1">Timestamp / Verify</div>
+      <div class="tab-item" onclick="switchTab(2)" data-i18n="tab2">CatDB / Remove</div>
+      <div class="tab-item" onclick="switchTab(3)" data-i18n="tab3">Batch</div>
+      <div class="tab-item" onclick="switchTab(4)" data-i18n="tab4">🔑 Generate Cert</div>
+      <div class="tab-item" onclick="switchTab(5)" data-i18n="tab5">Options</div>
+      <div class="tab-item" onclick="switchTab(6)" data-i18n="tab6">Output</div>
+    </div>
+    <div class="tab-content">
+      <div class="tab-pane active">
+        <h3 data-i18n="tp0_title">Sign</h3>
+        <p data-i18n="tp0_p1">Select one or more files for signing. Choose the certificate method — from the Windows certificate store (by subject name or SHA1 thumbprint) or from a PFX file with optional password.</p>
+        <p data-i18n="tp0_p2">Configure hash algorithm, description, URL, timestamp server type and hash, dual signing, and debug mode. Click 🔒 Sign or use Show Command to preview the exact signtool invocation.</p>
+        <div class="tag-list">
+          <span class="tag">/fd SHA256</span><span class="tag">/n cert_name</span><span class="tag">/sha1</span>
+          <span class="tag">/f pfx_file</span><span class="tag">/p password</span><span class="tag">/tr RFC3161</span>
+          <span class="tag">/t Authenticode</span><span class="tag">/as dual_sign</span><span class="tag">/debug</span>
+        </div>
+      </div>
+      <div class="tab-pane">
+        <h3 data-i18n="tp1_title">Timestamp / Verify</h3>
+        <p data-i18n="tp1_p1">Add a timestamp to files that are already signed. Choose RFC3161 (modern, recommended for long-term validity) or Authenticode (legacy systems).</p>
+        <p data-i18n="tp1_p2">Verify signatures with /pa (all signatures) or /pg (page signature), with optional catalog file (/c). Results are colour-coded in the output panel.</p>
+        <div class="tag-list"><span class="tag">/tr RFC3161</span><span class="tag">/td SHA256</span><span class="tag">/pa</span><span class="tag">/pg</span><span class="tag">/c catalog</span></div>
+      </div>
+      <div class="tab-pane">
+        <h3 data-i18n="tp2_title">CatDB / Remove</h3>
+        <p data-i18n="tp2_p1">Manage the Windows catalog database: add or remove .cat catalog files using the catdb command. Requires administrator privileges.</p>
+        <p data-i18n="tp2_p2">The Remove section strips Authenticode signatures from binaries using signtool remove /s. Select files and click Remove Signatures.</p>
+        <div class="tag-list"><span class="tag">catdb /add</span><span class="tag">catdb /del</span><span class="tag">remove /s</span></div>
+      </div>
+      <div class="tab-pane">
+        <h3 data-i18n="tp3_title">Batch Mode</h3>
+        <p data-i18n="tp3_p1">Load, edit, and execute signtool response files. Format: one argument per line, first line is the signtool command (sign, verify, timestamp, etc.).</p>
+        <p data-i18n="tp3_p2">Example response file:</p>
+        <div class="install-card" style="margin-top:8px">
+          <div class="install-body" style="line-height:1.8">
+            <span style="color:var(--green)">sign</span><br>
+            <span style="color:var(--yellow)">/n</span> <span style="color:#a78bfa">"My Certificate"</span><br>
+            <span style="color:var(--yellow)">/fd</span> <span style="color:#a78bfa">SHA256</span><br>
+            <span style="color:var(--yellow)">/tr</span> <span style="color:var(--accent3)">http://timestamp.sectigo.com</span><br>
+            <span style="color:var(--yellow)">/td</span> <span style="color:#a78bfa">SHA256</span><br>
+            <span style="color:#f97316">C:\Release\app.exe</span>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane">
+        <h3 data-i18n="tp4_title">🔑 Generate Certificate</h3>
+        <p data-i18n="tp4_p1">Generate certificates via OpenSSL (cross-platform) or PowerShell New-SelfSignedCertificate (Windows only, exports to PFX).</p>
+        <p data-i18n="tp4_p2">Supported types: Self-signed, Root CA, Signed by CA. Configure: key algorithm (RSA / EC), key size, signature hash, validity, Subject fields (CN, O, C, L, ST, e-mail), SAN (DNS + IP), PFX export and Windows cert store installation.</p>
+        <div class="tag-list"><span class="tag">Self-signed</span><span class="tag">Root CA</span><span class="tag">CA-signed</span><span class="tag">RSA / EC</span><span class="tag">SHA-256/384/512</span><span class="tag">SAN</span><span class="tag">PFX export</span></div>
+      </div>
+      <div class="tab-pane">
+        <h3 data-i18n="tp5_title">Options</h3>
+        <p data-i18n="tp5_p1">Switch the application language between Polish and English — no restart required. All UI labels update instantly.</p>
+        <p data-i18n="tp5_p2">Manually configure the paths to signtool.exe and openssl.exe if auto-detection did not find them on your system.</p>
+        <div class="tag-list"><span class="tag" data-i18n="tag_pl">Polski</span><span class="tag">English</span><span class="tag" data-i18n="tag_paths">Tool paths</span></div>
+      </div>
+      <div class="tab-pane">
+        <h3 data-i18n="tp6_title">Output</h3>
+        <p data-i18n="tp6_p1">All operations stream their output here in real time. Lines are colour-coded: green for success, red for errors, blue for the executed command echo, and grey for separators.</p>
+        <p data-i18n="tp6_p2">The output widget is scrollable and retains history for the current session. Exit codes are displayed prominently at the end of each operation.</p>
+        <div class="tag-list">
+          <span class="tag" style="border-color:rgba(34,211,160,.3);color:var(--green)">✓ success</span>
+          <span class="tag" style="border-color:rgba(248,113,113,.3);color:var(--red)">✗ error</span>
+          <span class="tag" style="border-color:rgba(96,165,250,.3);color:var(--accent2)">cmd echo</span>
+          <span class="tag">exit code</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- REQUIREMENTS -->
+<section id="requirements">
+  <p class="section-label" data-i18n="sec_req_label">System Requirements</p>
+  <h2 data-i18n="sec_req_title">Prerequisites</h2>
+  <p class="section-desc" data-i18n="sec_req_desc">Minimal footprint. No pip packages. Just Python and the Windows SDK.</p>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <table class="req-table">
+      <thead>
+        <tr>
+          <th data-i18n="req_col1">Component</th>
+          <th data-i18n="req_col2">Requirement</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>OS</td><td data-i18n="req_os">Windows 10 / 11, 64-bit</td></tr>
+        <tr><td>Python</td><td data-i18n="req_py">3.9 or newer — standard library only, no external packages</td></tr>
+        <tr><td>signtool.exe</td><td data-i18n="req_st">Windows SDK — auto-detected at launch; can be set manually</td></tr>
+        <tr><td>openssl.exe</td><td data-i18n="req_ossl">Required for certificate generation — auto-detected; can be set manually</td></tr>
+        <tr><td data-i18n="req_disp_lbl">Display</td><td data-i18n="req_disp">Minimum 1280 × 800 px recommended</td></tr>
+        <tr><td data-i18n="req_priv_lbl">Privileges</td><td data-i18n="req_priv">Administrator rights required for CatDB and certificate store operations</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- INSTALL -->
+<section id="install">
+  <p class="section-label" data-i18n="sec_inst_label">Getting Started</p>
+  <h2 data-i18n="sec_inst_title">Install & Run</h2>
+  <p class="section-desc" data-i18n="sec_inst_desc">No dependencies. Download, run. Or compile to a portable EXE.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;flex-wrap:wrap">
+    <div class="install-card">
+      <div class="install-header">
+        <svg width="14" height="14" fill="none" stroke="var(--accent2)" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span data-i18n="inst_src_title">Run from source</span>
+      </div>
+      <div class="install-body">
+        <span class="comment" data-i18n="inst_src_c1"># Clone the repository</span><br>
+        <span class="cmd">git clone</span> <span class="arg">https://github.com/seb07uk/signtool-its-gui</span><br>
+        <br>
+        <span class="comment" data-i18n="inst_src_c2"># Run directly — no install needed</span><br>
+        <span class="cmd">python</span> <span class="arg">main.py</span>
+      </div>
+    </div>
+    <div class="install-card">
+      <div class="install-header">
+        <svg width="14" height="14" fill="none" stroke="var(--accent2)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span data-i18n="inst_exe_title">Compile to EXE</span>
+      </div>
+      <div class="install-body">
+        <span class="comment" data-i18n="inst_exe_c1"># Install PyInstaller</span><br>
+        <span class="cmd">pip install</span> <span class="arg">pyinstaller</span><br>
+        <br>
+        <span class="comment" data-i18n="inst_exe_c2"># Build portable single-file EXE</span><br>
+        <span class="cmd">pyinstaller</span> <span class="arg">--noconsole --onefile main.py</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">
+    <strong>polsoft.ITS™ Group</strong> &nbsp;·&nbsp; © 2026 All rights reserved.
+    <br><span style="font-size:11px">polsoft.its@fastservice.com &nbsp;·&nbsp; Proprietary License</span>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/seb07uk" target="_blank">GitHub</a>
+    <a href="mailto:polsoft.its@fastservice.com" data-i18n="footer_contact">Contact</a>
+  </div>
+</footer>
+
+<script>
+// ─── TRANSLATIONS ─────────────────────────────────────────────────────────
+const i18n = {
+  en: {
+    nav_features: "Features", nav_modules: "Modules", nav_install: "Install", nav_requirements: "Requirements",
+    badge: "polsoft.ITS™ Group · v2.0",
+    h1_sub: "Code Signing GUI",
+    hero_desc: "Graphical interface for Microsoft SignTool & OpenSSL. Sign, timestamp, verify and generate certificates — all from one window, no command line required.",
+    btn_quickstart: "Quick Start",
+    sec_feat_label: "Capabilities", sec_feat_title: "Everything in one window",
+    sec_feat_desc: "Complete code-signing workflow with auto-detection of tools, bilingual interface, and colour-coded real-time output.",
+    f1_title: "Code Signing", f1_desc: "Sign EXE, DLL, scripts using a certificate from the Windows store or a PFX file. Supports SHA-256, SHA-512, dual signing (/as) and debug mode.",
+    f2_title: "Timestamp", f2_desc: "Add RFC3161 (modern, recommended) or Authenticode (legacy) timestamps to already-signed files. Configurable server and hash algorithm.",
+    f3_title: "Signature Verify", f3_desc: "Verify all signatures (/pa) or page signatures (/pg) against optional catalog files. Colour-coded pass/fail output.",
+    f4_title: "CatDB & Remove", f4_desc: "Add or remove catalog files from the Windows catalog database. Strip Authenticode signatures from binaries in bulk.",
+    f5_title: "Batch Mode", f5_desc: "Built-in response file editor. Load, edit, and execute signtool batch jobs directly — one argument per line, first line is the command.",
+    f6_title: "Certificate Generator", f6_desc: "Generate self-signed, Root CA or CA-signed certificates via OpenSSL or PowerShell. RSA / EC keys, SAN, PFX export, Windows store install.",
+    f7_title: "Bilingual UI", f7_desc: "Full Polish / English interface switchable at runtime. No restart required. Built-in translation system with no external dependencies.",
+    f8_title: "Auto-Detection", f8_desc: "Scans all drives at startup for signtool.exe and openssl.exe. Summary dialog shows found paths; missing tools can be located manually.",
+    f9_title: "Non-blocking Execution", f9_desc: "All operations run in daemon threads. Output streams line-by-line into the GUI. No frozen window, no console flash on Windows.",
+    sec_mod_label: "Application Modules", sec_mod_title: "Seven tabs, one workflow",
+    sec_mod_desc: "Each tab focuses on a specific task. Navigate freely — all settings persist within the session.",
+    tab0:"Sign", tab1:"Timestamp / Verify", tab2:"CatDB / Remove", tab3:"Batch", tab4:"🔑 Generate Cert", tab5:"Options", tab6:"Output",
+    tp0_title:"Sign", tp0_p1:"Select one or more files for signing. Choose the certificate method — from the Windows certificate store (by subject name or SHA1 thumbprint) or from a PFX file with optional password.", tp0_p2:"Configure hash algorithm, description, URL, timestamp server type and hash, dual signing, and debug mode. Click 🔒 Sign or use Show Command to preview the exact signtool invocation.",
+    tp1_title:"Timestamp / Verify", tp1_p1:"Add a timestamp to files that are already signed. Choose RFC3161 (modern, recommended for long-term validity) or Authenticode (legacy systems).", tp1_p2:"Verify signatures with /pa (all signatures) or /pg (page signature), with optional catalog file (/c). Results are colour-coded in the output panel.",
+    tp2_title:"CatDB / Remove", tp2_p1:"Manage the Windows catalog database: add or remove .cat catalog files using the catdb command. Requires administrator privileges.", tp2_p2:"The Remove section strips Authenticode signatures from binaries using signtool remove /s. Select files and click Remove Signatures.",
+    tp3_title:"Batch Mode", tp3_p1:"Load, edit, and execute signtool response files. Format: one argument per line, first line is the signtool command (sign, verify, timestamp, etc.).", tp3_p2:"Example response file:",
+    tp4_title:"🔑 Generate Certificate", tp4_p1:"Generate certificates via OpenSSL (cross-platform) or PowerShell New-SelfSignedCertificate (Windows only, exports to PFX).", tp4_p2:"Supported types: Self-signed, Root CA, Signed by CA. Configure: key algorithm (RSA / EC), key size, signature hash, validity, Subject fields (CN, O, C, L, ST, e-mail), SAN (DNS + IP), PFX export and Windows cert store installation.",
+    tp5_title:"Options", tp5_p1:"Switch the application language between Polish and English — no restart required. All UI labels update instantly.", tp5_p2:"Manually configure the paths to signtool.exe and openssl.exe if auto-detection did not find them on your system.",
+    tp6_title:"Output", tp6_p1:"All operations stream their output here in real time. Lines are colour-coded: green for success, red for errors, blue for the executed command echo, and grey for separators.", tp6_p2:"The output widget is scrollable and retains history for the current session. Exit codes are displayed prominently at the end of each operation.",
+    tag_pl:"Polski", tag_paths:"Tool paths",
+    sec_req_label:"System Requirements", sec_req_title:"Prerequisites", sec_req_desc:"Minimal footprint. No pip packages. Just Python and the Windows SDK.",
+    req_col1:"Component", req_col2:"Requirement",
+    req_os:"Windows 10 / 11, 64-bit", req_py:"3.9 or newer — standard library only, no external packages",
+    req_st:"Windows SDK — auto-detected at launch; can be set manually", req_ossl:"Required for certificate generation — auto-detected; can be set manually",
+    req_disp_lbl:"Display", req_disp:"Minimum 1280 × 800 px recommended",
+    req_priv_lbl:"Privileges", req_priv:"Administrator rights required for CatDB and certificate store operations",
+    sec_inst_label:"Getting Started", sec_inst_title:"Install & Run", sec_inst_desc:"No dependencies. Download, run. Or compile to a portable EXE.",
+    inst_src_title:"Run from source", inst_src_c1:"# Clone the repository", inst_src_c2:"# Run directly — no install needed",
+    inst_exe_title:"Compile to EXE", inst_exe_c1:"# Install PyInstaller", inst_exe_c2:"# Build portable single-file EXE",
+    footer_contact:"Contact"
+  },
+  pl: {
+    nav_features:"Funkcje", nav_modules:"Moduly", nav_install:"Instalacja", nav_requirements:"Wymagania",
+    badge:"polsoft.ITS™ Group · v2.0",
+    h1_sub:"Interfejs podpisywania kodu",
+    hero_desc:"Graficzny interfejs dla Microsoft SignTool i OpenSSL. Podpisuj, dodawaj znaczniki czasu, weryfikuj i generuj certyfikaty — wszystko w jednym oknie, bez wiersza polecen.",
+    btn_quickstart:"Szybki start",
+    sec_feat_label:"Mozliwosci", sec_feat_title:"Wszystko w jednym oknie",
+    sec_feat_desc:"Kompletny przepływ pracy podpisywania kodu z automatycznym wykrywaniem narzedzi, dwujezycznym interfejsem i kolorowym wyjsciem w czasie rzeczywistym.",
+    f1_title:"Podpisywanie kodu", f1_desc:"Podpisuj EXE, DLL, skrypty uzywajac certyfikatu z magazynu Windows lub pliku PFX. Obsluga SHA-256, SHA-512, podwojnego podpisywania (/as) i trybu debugowania.",
+    f2_title:"Znacznik czasu", f2_desc:"Dodaj znaczniki czasu RFC3161 (nowoczesny, zalecany) lub Authenticode (legacy) do juz podpisanych plikow. Konfigurowalny serwer i algorytm hash.",
+    f3_title:"Weryfikacja podpisu", f3_desc:"Weryfikuj wszystkie podpisy (/pa) lub podpisy strony (/pg) wzgledem opcjonalnych plikow katalogu. Kolorowe wyjscie sukces/blad.",
+    f4_title:"CatDB i usuwanie", f4_desc:"Dodaj lub usun pliki katalogu z bazy katalogow Windows. Usuwaj podpisy Authenticode z plikow binarnych masowo.",
+    f5_title:"Tryb wsadowy", f5_desc:"Wbudowany edytor plikow odpowiedzi. Wczytuj, edytuj i wykonuj zadania wsadowe signtool bezposrednio — jeden argument na linie, pierwsza linia to komenda.",
+    f6_title:"Generator certyfikatow", f6_desc:"Generuj certyfikaty samopodpisane, Root CA lub podpisane przez CA via OpenSSL lub PowerShell. Klucze RSA / EC, SAN, eksport PFX, instalacja w magazynie Windows.",
+    f7_title:"Dwujezyczny interfejs", f7_desc:"Pelny interfejs Polski / English przelaczany w czasie dzialania. Nie wymaga restartu. Wbudowany system tlumaczen bez zewnetrznych zaleznosci.",
+    f8_title:"Automatyczne wykrywanie", f8_desc:"Skanuje wszystkie dyski przy starcie w poszukiwaniu signtool.exe i openssl.exe. Dialog podsumowania pokazuje znalezione sciezki; brakujace narzedzia mozna wskazac recznie.",
+    f9_title:"Nieblokujace wykonywanie", f9_desc:"Wszystkie operacje dzialaja w watkach-demonach. Wyjscie strumieniowane linia po linii do GUI. Brak zamrozenia okna, brak migania konsoli na Windows.",
+    sec_mod_label:"Moduly aplikacji", sec_mod_title:"Siedem zakladek, jeden przepływ pracy",
+    sec_mod_desc:"Kazda zakladka skupia sie na okreslonym zadaniu. Nawiguj swobodnie — wszystkie ustawienia sa zachowywane w sesji.",
+    tab0:"Sign", tab1:"Timestamp / Verify", tab2:"CatDB / Remove", tab3:"Batch", tab4:"🔑 Generuj certyfikat", tab5:"Opcje", tab6:"Wynik",
+    tp0_title:"Sign — Podpisywanie", tp0_p1:"Wybierz jeden lub wiecej plikow do podpisania. Wybierz metode certyfikatu — z magazynu certyfikatow Windows (po nazwie podmiotu lub odcisku SHA1) lub z pliku PFX z opcjonalnym haslem.", tp0_p2:"Skonfiguruj algorytm hash, opis, URL, typ serwera znacznikow czasu i hash, podwojne podpisywanie i tryb debugowania. Kliknij 🔒 Podpisz lub uzyj Pokaz komende, aby podgladnac dokladne wywolanie signtool.",
+    tp1_title:"Timestamp / Verify", tp1_p1:"Dodaj znacznik czasu do juz podpisanych plikow. Wybierz RFC3161 (nowoczesny, zalecany dla dlugookresowej waznosci) lub Authenticode (starsze systemy).", tp1_p2:"Weryfikuj podpisy z /pa (wszystkie podpisy) lub /pg (podpis strony), z opcjonalnym plikiem katalogu (/c). Wyniki sa kolorowo kodowane w panelu wyjscia.",
+    tp2_title:"CatDB / Remove", tp2_p1:"Zarzadzaj baza katalogow Windows: dodawaj lub usuwaj pliki .cat katalogu uzywajac polecenia catdb. Wymaga uprawnien administratora.", tp2_p2:"Sekcja Remove usuwa podpisy Authenticode z plikow binarnych uzywajac signtool remove /s. Wybierz pliki i kliknij Usun podpisy.",
+    tp3_title:"Tryb wsadowy", tp3_p1:"Wczytuj, edytuj i wykonuj pliki odpowiedzi signtool. Format: jeden argument na linie, pierwsza linia to komenda signtool (sign, verify, timestamp itp.).", tp3_p2:"Przykladowy plik odpowiedzi:",
+    tp4_title:"🔑 Generuj certyfikat", tp4_p1:"Generuj certyfikaty via OpenSSL (wieloplatformowy) lub PowerShell New-SelfSignedCertificate (tylko Windows, eksport do PFX).", tp4_p2:"Obsługiwane typy: Samopodpisany, Root CA, Podpisany przez CA. Konfiguracja: algorytm klucza (RSA / EC), rozmiar klucza, hash podpisu, waznosc, pola Subject (CN, O, C, L, ST, e-mail), SAN (DNS + IP), eksport PFX i instalacja w magazynie certyfikatow Windows.",
+    tp5_title:"Opcje", tp5_p1:"Przelaczaj jezyk aplikacji miedzy polskim a angielskim — bez restartu. Wszystkie etykiety UI aktualizuja sie natychmiast.", tp5_p2:"Recznie skonfiguruj sciezki do signtool.exe i openssl.exe, jesli automatyczne wykrywanie nie znalazlo ich w systemie.",
+    tp6_title:"Wynik", tp6_p1:"Wszystkie operacje strumieniuja wyjscie tutaj w czasie rzeczywistym. Linie sa kolorowo kodowane: zielony dla sukcesu, czerwony dla bledow, niebieski dla echa wykonanej komendy i szary dla separatorow.", tp6_p2:"Widget wyjscia jest przewijalny i zachowuje historie dla biezacej sesji. Kody wyjscia sa wyswietlane wyraznie na koncu kazdej operacji.",
+    tag_pl:"Polski", tag_paths:"Sciezki narzedzi",
+    sec_req_label:"Wymagania systemowe", sec_req_title:"Wymagania wstepne", sec_req_desc:"Minimalne wymagania. Brak pakietow pip. Tylko Python i Windows SDK.",
+    req_col1:"Komponent", req_col2:"Wymaganie",
+    req_os:"Windows 10 / 11, 64-bit", req_py:"3.9 lub nowszy — tylko biblioteka standardowa, brak zewnetrznych pakietow",
+    req_st:"Windows SDK — wykrywany automatycznie przy starcie; mozna ustawic recznie", req_ossl:"Wymagany do generowania certyfikatow — wykrywany automatycznie; mozna ustawic recznie",
+    req_disp_lbl:"Ekran", req_disp:"Minimalna zalecana rozdzielczosc 1280 × 800 px",
+    req_priv_lbl:"Uprawnienia", req_priv:"Uprawnienia administratora wymagane do operacji CatDB i magazynu certyfikatow",
+    sec_inst_label:"Pierwsze kroki", sec_inst_title:"Instalacja i uruchomienie", sec_inst_desc:"Brak zaleznosci. Pobierz, uruchom. Lub skompiluj do przenosnego EXE.",
+    inst_src_title:"Uruchomienie ze zrodla", inst_src_c1:"# Sklonuj repozytorium", inst_src_c2:"# Uruchom bezposrednio — instalacja niepotrzebna",
+    inst_exe_title:"Kompilacja do EXE", inst_exe_c1:"# Zainstaluj PyInstaller", inst_exe_c2:"# Zbuduj przenosny jednoplikowy EXE",
+    footer_contact:"Kontakt"
+  }
+};
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  document.getElementById('lang-pl').classList.toggle('active', lang === 'pl');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang][key]) el.textContent = i18n[lang][key];
+  });
+  document.documentElement.lang = lang;
+}
+
+function toggleLang() {
+  setLang(currentLang === 'en' ? 'pl' : 'en');
+}
+
+// ─── TABS ──────────────────────────────────────────────────────────────
+function switchTab(idx) {
+  document.querySelectorAll('.tab-item').forEach((t,i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.tab-pane').forEach((p,i) => p.classList.toggle('active', i === idx));
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────
+setLang('en');
+</script>
+</body>
+</html>

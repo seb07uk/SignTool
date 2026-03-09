@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PublicTester QuickDigital Signature GUI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue:        #0078D4;
+    --blue-bright: #2196F3;
+    --blue-glow:   #0078D440;
+    --blue-pale:   #B3D7F5;
+    --cyan:        #00D4FF;
+    --green:       #00FF88;
+    --bg:          #080B12;
+    --bg2:         #0D1117;
+    --bg3:         #131920;
+    --glass:       rgba(13,17,23,0.7);
+    --border:      rgba(0,120,212,0.25);
+    --border-bright: rgba(0,120,212,0.7);
+    --text:        #E8F4FD;
+    --text-muted:  #7A9DBB;
+    --text-dim:    #3A5A7A;
+    --font-display: 'Syne', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ── CUSTOM CURSOR ─────────────────────────────────────────── */
+  .cursor {
+    position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;
+    mix-blend-mode: screen;
+  }
+  .cursor-dot {
+    width: 8px; height: 8px; background: var(--cyan);
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    transition: transform 0.1s;
+  }
+  .cursor-ring {
+    position: fixed; top: 0; left: 0;
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--blue-bright);
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    transition: transform 0.15s ease, width 0.3s, height 0.3s, opacity 0.3s;
+    pointer-events: none; z-index: 9998;
+    opacity: 0.6;
+  }
+  body:hover .cursor-dot { opacity: 1; }
+
+  /* ── CANVAS BACKGROUND ─────────────────────────────────────── */
+  #canvas-bg {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── NOISE OVERLAY ─────────────────────────────────────────── */
+  .noise {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 200px;
+  }
+
+  /* ── LAYOUT ────────────────────────────────────────────────── */
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 40px; position: relative; z-index: 2; }
+
+  /* ── NAV ───────────────────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 20px 0;
+    transition: background 0.4s, backdrop-filter 0.4s;
+  }
+  nav.scrolled {
+    background: rgba(8,11,18,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1200px; margin: 0 auto; padding: 0 40px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 800; font-size: 15px; letter-spacing: 0.05em;
+    color: var(--text); text-decoration: none;
+  }
+  .nav-logo-icon {
+    width: 32px; height: 32px;
+    background: var(--blue);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+    color: #fff;
+    position: relative; overflow: hidden;
+  }
+  .nav-logo-icon::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%);
+  }
+  .nav-links { display: flex; gap: 36px; align-items: center; }
+  .nav-links a {
+    font-size: 13px; font-weight: 500; letter-spacing: 0.08em;
+    color: var(--text-muted); text-decoration: none; text-transform: uppercase;
+    transition: color 0.2s;
+    position: relative;
+  }
+  .nav-links a::after {
+    content: ''; position: absolute; bottom: -4px; left: 0;
+    width: 0; height: 1px; background: var(--cyan);
+    transition: width 0.3s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a:hover::after { width: 100%; }
+  .nav-cta {
+    background: var(--blue); color: #fff !important;
+    padding: 9px 20px; border-radius: 6px;
+    font-size: 12px !important; font-weight: 600 !important;
+    transition: background 0.2s, box-shadow 0.2s !important;
+  }
+  .nav-cta:hover {
+    background: var(--blue-bright) !important;
+    box-shadow: 0 0 20px var(--blue-glow) !important;
+  }
+  .nav-cta::after { display: none !important; }
+
+  /* ── HERO ──────────────────────────────────────────────────── */
+  .hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 120px 0 80px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 80px; align-items: center;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 400;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--cyan);
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.2);
+    padding: 6px 14px; border-radius: 100px;
+    margin-bottom: 28px;
+    opacity: 0; animation: fadeUp 0.7s ease 0.1s forwards;
+  }
+  .hero-eyebrow .dot {
+    width: 6px; height: 6px; background: var(--cyan);
+    border-radius: 50%; animation: pulse 2s infinite;
+  }
+
+  .hero-title {
+    font-size: clamp(42px, 5vw, 72px);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    opacity: 0; animation: fadeUp 0.7s ease 0.2s forwards;
+  }
+  .hero-title .accent {
+    background: linear-gradient(90deg, var(--blue-bright), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-title .line2 {
+    color: var(--text-muted);
+    display: block;
+  }
+
+  .hero-desc {
+    font-size: 17px; line-height: 1.7;
+    color: var(--text-muted); max-width: 500px;
+    margin-bottom: 44px;
+    opacity: 0; animation: fadeUp 0.7s ease 0.3s forwards;
+  }
+
+  .hero-actions {
+    display: flex; gap: 16px; align-items: center;
+    opacity: 0; animation: fadeUp 0.7s ease 0.4s forwards;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--blue); color: #fff;
+    padding: 14px 28px; border-radius: 8px;
+    font-family: var(--font-display); font-size: 14px; font-weight: 600;
+    text-decoration: none; letter-spacing: 0.02em;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .btn-primary::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,120,212,0.5);
+    background: var(--blue-bright);
+  }
+  .btn-primary svg { width: 16px; height: 16px; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--text-muted); font-size: 14px; font-weight: 500;
+    text-decoration: none; letter-spacing: 0.02em;
+    padding: 14px 4px;
+    transition: color 0.2s;
+    border-bottom: 1px solid transparent;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-bright); }
+
+  /* ── HERO VISUAL ───────────────────────────────────────────── */
+  .hero-visual {
+    position: relative;
+    opacity: 0; animation: fadeLeft 0.8s ease 0.5s forwards;
+  }
+
+  .app-window {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(0,120,212,0.1),
+      0 40px 80px rgba(0,0,0,0.6),
+      0 0 60px rgba(0,120,212,0.1);
+    position: relative;
+  }
+
+  .window-chrome {
+    background: #1A2332;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .w-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .w-dot.red   { background: #FF5F57; }
+  .w-dot.yellow{ background: #FEBC2E; }
+  .w-dot.green { background: #28C840; }
+  .window-title {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-muted); margin-left: 8px;
+    flex: 1; text-align: center;
+  }
+
+  .window-header {
+    background: var(--blue);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .window-header-icon {
+    width: 26px; height: 26px; background: rgba(255,255,255,0.2);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  }
+  .window-header-icon svg { width: 14px; height: 14px; fill: white; }
+  .window-header-text {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #fff;
+  }
+
+  .window-body { padding: 20px; }
+
+  .w-section-title {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 10px;
+  }
+
+  .w-field {
+    display: flex; gap: 8px; margin-bottom: 14px; align-items: center;
+  }
+  .w-label {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-muted); width: 80px; flex-shrink: 0;
+  }
+  .w-input {
+    flex: 1; background: rgba(0,120,212,0.06);
+    border: 1px solid var(--border);
+    border-radius: 5px; padding: 8px 12px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text);
+  }
+  .w-btn {
+    padding: 8px 14px; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .w-divider {
+    height: 1px; background: var(--border); margin: 16px 0;
+  }
+  .w-sign-btn {
+    background: var(--blue); color: #fff;
+    padding: 11px 24px; border-radius: 7px;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+    display: inline-block;
+    box-shadow: 0 0 20px rgba(0,120,212,0.4);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  .w-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 11px; color: #00FF88;
+    margin-left: 16px;
+  }
+  .w-footer {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);
+    text-align: center;
+  }
+
+  /* Floating badges */
+  .hero-badge {
+    position: absolute;
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: float 4s ease-in-out infinite;
+  }
+  .hero-badge.b1 { top: -24px; right: 20px; animation-delay: 0s; }
+  .hero-badge.b2 { bottom: 20px; left: -20px; animation-delay: 1.5s; }
+  .badge-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .badge-dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .badge-dot.blue { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+  /* ── STATS STRIP ───────────────────────────────────────────── */
+  .stats-strip {
+    padding: 30px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,120,212,0.03);
+  }
+  .stats-inner {
+    display: flex; justify-content: space-around; align-items: center;
+    max-width: 1200px; margin: 0 auto; padding: 0 40px;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-size: 36px; font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(90deg, var(--blue-bright), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 400;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-dim); margin-top: 4px;
+  }
+  .stat-divider { width: 1px; height: 50px; background: var(--border); }
+
+  /* ── FEATURES ──────────────────────────────────────────────── */
+  .features { padding: 120px 0; }
+
+  .section-label {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan);
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: clamp(32px, 4vw, 52px); font-weight: 800;
+    letter-spacing: -0.02em; line-height: 1.1;
+    margin-bottom: 60px;
+  }
+  .section-title .dim { color: var(--text-muted); }
+
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .feat-card {
+    background: var(--bg2);
+    padding: 36px;
+    transition: background 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .feat-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--blue), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .feat-card:hover { background: var(--bg3); }
+  .feat-card:hover::before { opacity: 1; }
+
+  .feat-icon {
+    width: 44px; height: 44px;
+    background: rgba(0,120,212,0.1);
+    border: 1px solid rgba(0,120,212,0.25);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    font-size: 20px;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .feat-card:hover .feat-icon {
+    background: rgba(0,120,212,0.2);
+    box-shadow: 0 0 20px rgba(0,120,212,0.2);
+  }
+
+  .feat-title {
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 10px; letter-spacing: -0.01em;
+  }
+  .feat-desc {
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  /* ── FLOW SECTION ──────────────────────────────────────────── */
+  .flow { padding: 100px 0; }
+
+  .flow-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 80px; align-items: start;
+  }
+
+  .flow-steps { display: flex; flex-direction: column; gap: 0; }
+
+  .flow-step {
+    display: flex; gap: 20px;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: padding-left 0.3s;
+  }
+  .flow-step:hover { padding-left: 8px; }
+  .flow-step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    color: var(--text-dim); width: 30px; flex-shrink: 0;
+    padding-top: 3px;
+  }
+  .step-content {}
+  .step-title {
+    font-size: 17px; font-weight: 700;
+    margin-bottom: 6px; letter-spacing: -0.01em;
+  }
+  .step-desc {
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* Terminal window */
+  .terminal {
+    background: #0A0E16;
+    border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,120,212,0.05);
+    position: sticky; top: 100px;
+  }
+  .term-bar {
+    background: #141C28;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .term-dots { display: flex; gap: 6px; }
+  .term-dot { width: 11px; height: 11px; border-radius: 50%; opacity: 0.8; }
+  .term-dot.r { background: #FF5F57; }
+  .term-dot.y { background: #FEBC2E; }
+  .term-dot.g { background: #28C840; }
+  .term-title {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-dim); margin-left: 10px;
+  }
+  .term-body { padding: 24px; min-height: 300px; }
+  .term-line {
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.8;
+    display: flex; gap: 10px;
+  }
+  .term-prompt { color: var(--blue-bright); user-select: none; }
+  .term-cmd { color: var(--text); }
+  .term-out { color: var(--text-muted); }
+  .term-ok { color: var(--green); }
+  .term-info { color: var(--cyan); }
+  .term-cursor {
+    display: inline-block; width: 8px; height: 14px;
+    background: var(--cyan); opacity: 0.8;
+    animation: blink 1.2s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  /* ── TECH SECTION ──────────────────────────────────────────── */
+  .tech { padding: 100px 0; }
+
+  .tech-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-top: 60px;
+  }
+
+  .tech-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px;
+    transition: border-color 0.3s, transform 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .tech-card::after {
+    content: ''; position: absolute;
+    bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .tech-card:hover { border-color: var(--border-bright); transform: translateY(-4px); }
+  .tech-card:hover::after { transform: scaleX(1); }
+
+  .tech-badge {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--blue-bright); background: rgba(0,120,212,0.1);
+    padding: 3px 8px; border-radius: 4px;
+    display: inline-block; margin-bottom: 14px;
+  }
+  .tech-name { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .tech-ver {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* ── SECURITY SECTION ──────────────────────────────────────── */
+  .security { padding: 100px 0; }
+
+  .security-inner {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 64px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 64px; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .security-inner::before {
+    content: '';
+    position: absolute; top: -100px; right: -100px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(0,120,212,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .security-list { display: flex; flex-direction: column; gap: 20px; }
+  .sec-item {
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 18px 20px;
+    background: rgba(0,120,212,0.04);
+    border: 1px solid rgba(0,120,212,0.12);
+    border-radius: 10px;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .sec-item:hover {
+    border-color: rgba(0,120,212,0.3);
+    background: rgba(0,120,212,0.08);
+  }
+  .sec-icon {
+    font-size: 22px; flex-shrink: 0; margin-top: 2px;
+    filter: drop-shadow(0 0 6px var(--blue-glow));
+  }
+  .sec-title {
+    font-size: 14px; font-weight: 700; margin-bottom: 4px;
+  }
+  .sec-desc {
+    font-family: var(--font-mono); font-size: 11px; line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* ── SCREENSHOT SECTION ────────────────────────────────────── */
+  .screenshot-sec { padding: 100px 0; }
+
+  .screenshot-frame {
+    position: relative; margin-top: 60px;
+    display: flex; justify-content: center;
+  }
+
+  .screenshot-glow {
+    position: absolute; inset: -40px;
+    background: radial-gradient(ellipse at center, rgba(0,120,212,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .screenshot-window {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(0,120,212,0.1),
+      0 60px 120px rgba(0,0,0,0.7),
+      0 0 80px rgba(0,120,212,0.12);
+    max-width: 520px; width: 100%;
+    position: relative; z-index: 2;
+  }
+
+  .ss-chrome {
+    background: #1A2332; padding: 12px 18px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ss-chrome .wdots { display: flex; gap: 7px; }
+  .ss-chrome .wd { width: 12px; height: 12px; border-radius: 50%; }
+  .ss-chrome .wd.r { background: #FF5F57; }
+  .ss-chrome .wd.y { background: #FEBC2E; }
+  .ss-chrome .wd.g { background: #28C840; }
+  .ss-title {
+    flex: 1; text-align: center;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  }
+  .ss-img {
+    display: block; width: 100%;
+    image-rendering: crisp-edges;
+  }
+
+  /* ── CTA ───────────────────────────────────────────────────── */
+  .cta-section { padding: 120px 0; }
+
+  .cta-inner {
+    text-align: center;
+    background: linear-gradient(135deg, rgba(0,120,212,0.08) 0%, rgba(0,212,255,0.04) 100%);
+    border: 1px solid var(--border);
+    border-radius: 24px; padding: 80px 60px;
+    position: relative; overflow: hidden;
+  }
+  .cta-inner::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,120,212,0.12) 0%, transparent 60%);
+  }
+  .cta-title {
+    font-size: clamp(36px, 4vw, 56px); font-weight: 800;
+    letter-spacing: -0.02em; line-height: 1.1;
+    margin-bottom: 20px; position: relative;
+  }
+  .cta-sub {
+    font-family: var(--font-mono); font-size: 14px;
+    color: var(--text-muted); max-width: 500px; margin: 0 auto 40px;
+    line-height: 1.7; position: relative;
+  }
+  .cta-actions { display: flex; gap: 16px; justify-content: center; position: relative; }
+
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border-bright); color: var(--text);
+    padding: 14px 28px; border-radius: 8px;
+    font-family: var(--font-display); font-size: 14px; font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .btn-outline:hover {
+    background: rgba(0,120,212,0.1);
+    box-shadow: 0 0 20px var(--blue-glow);
+  }
+
+  /* ── FOOTER ────────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+  }
+  .footer-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1200px; margin: 0 auto; padding: 0 40px;
+  }
+  .footer-copy {
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);
+  }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+    text-decoration: none; letter-spacing: 0.08em; text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--text-muted); }
+
+  /* ── ANIMATIONS ────────────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeLeft {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.8); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; } 50% { opacity: 0; }
+  }
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,120,212,0.4); }
+    50%       { box-shadow: 0 0 35px rgba(0,120,212,0.7), 0 0 60px rgba(0,120,212,0.2); }
+  }
+  @keyframes scanline {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+
+  /* scroll reveal */
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1; transform: translateY(0);
+  }
+
+  /* scanline effect */
+  .scanline {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0,120,212,0.3), transparent);
+    pointer-events: none; z-index: 50;
+    animation: scanline 8s linear infinite;
+    opacity: 0.4;
+  }
+
+  /* ── RESPONSIVE ────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 60px; }
+    .hero-visual { order: -1; }
+    .hero-badge.b2 { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .flow-grid { grid-template-columns: 1fr; }
+    .tech-grid { grid-template-columns: repeat(2, 1fr); }
+    .security-inner { grid-template-columns: 1fr; gap: 40px; padding: 40px; }
+    .stats-inner { flex-wrap: wrap; gap: 30px; }
+    .stat-divider { display: none; }
+    .footer-inner { flex-direction: column; gap: 20px; text-align: center; }
+    .cta-actions { flex-direction: column; align-items: center; }
+    .nav-links { display: none; }
+    .wrap { padding: 0 20px; }
+  }
+
+  /* ── LANG SWITCHER ─────────────────────────────────────────── */
+  .lang-switcher {
+    display:flex; align-items:center;
+    background:rgba(0,120,212,.08);
+    border:1px solid var(--border);
+    border-radius:8px; overflow:hidden;
+    flex-shrink:0;
+  }
+  .lang-btn {
+    padding:7px 13px;
+    font-family:var(--font-mono); font-size:11px; font-weight:600;
+    letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-muted); cursor:pointer;
+    background:transparent; border:none;
+    transition:color .2s,background .2s;
+  }
+  .lang-btn:first-child { border-right:1px solid var(--border); }
+  .lang-btn.active { color:#fff; background:var(--blue); }
+  .lang-btn:not(.active):hover { color:var(--text); background:rgba(0,120,212,.12); }
+  /* fade on switch */
+  [data-i18n] { transition:opacity .15s ease; }
+  body.lang-switching [data-i18n] { opacity:0; }
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor"><div class="cursor-dot" id="cursorDot"></div></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Scanline -->
+<div class="scanline"></div>
+
+<!-- Noise -->
+<div class="noise"></div>
+
+<!-- Canvas particles -->
+<canvas id="canvas-bg"></canvas>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">QD</div>
+      QuickDigital
+    </a>
+    <div class="nav-links">
+      <a href="#features" data-i18n="nav.features">Funkcje</a>
+      <a href="#flow" data-i18n="nav.flow">Jak działa</a>
+      <a href="#security" data-i18n="nav.security">Bezpieczeństwo</a>
+      <a href="#screenshot" data-i18n="nav.screenshot">Zrzut ekranu</a>
+      <a href="#download" class="nav-cta" data-i18n="nav.download">Pobierz v1.1.0</a>
+    </div>
+    <!-- Language Switcher -->
+    <div class="lang-switcher" role="group" aria-label="Language">
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn"        id="btn-pl" onclick="setLang('pl')">PL</button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <div class="hero-eyebrow">
+          <span class="dot"></span>
+          <span data-i18n="hero.eyebrow">Windows · Python 3.10+ · v1.1.0</span>
+        </div>
+        <h1 class="hero-title">
+          <span data-i18n="hero.line1">Podpisuj pliki</span><br>
+          <span class="accent" data-i18n="hero.line2">cyfrowo.</span>
+          <span class="line2" data-i18n="hero.line3">Bez wysiłku.</span>
+        </h1>
+        <p class="hero-desc">
+          <span data-i18n="hero.desc">Graficzny interfejs do <strong>signtool.exe</strong> dla Windows. Auto-wykrywanie certyfikatów, asynchroniczne podpisywanie i znacznik czasu RFC&nbsp;3161 — wszystko w jednym oknie.</span>
+        </p>
+        <div class="hero-actions">
+          <a href="#download" class="btn-primary">
+            <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 12L3 7h3V2h4v5h3L8 12z" fill="currentColor"/>
+              <path d="M2 13h12v1H2v-1z" fill="currentColor"/>
+            </svg>
+            <span data-i18n="hero.cta">Pobierz teraz</span>
+          </a>
+          <a href="#screenshot" class="btn-ghost">
+            <span data-i18n="hero.preview">Podgląd aplikacji →</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <!-- Floating badge top -->
+        <div class="hero-badge b1">
+          <div class="badge-dot ok"></div>
+          signtool.exe — found
+        </div>
+
+        <!-- App Window Mock -->
+        <div class="app-window">
+          <div class="window-chrome">
+            <div class="w-dot red"></div>
+            <div class="w-dot yellow"></div>
+            <div class="w-dot green"></div>
+            <div class="window-title">PublicTester QuickDigital Signature GUI</div>
+          </div>
+          <div class="window-header">
+            <div class="window-header-icon">
+              <svg viewBox="0 0 16 16"><path d="M8 1a5 5 0 100 10A5 5 0 008 1zm0 8.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7zM8 4a1 1 0 100 2 1 1 0 000-2z"/></svg>
+            </div>
+            <div class="window-header-text">PublicTester QuickDigital Signature GUI&nbsp;&nbsp;v1.1.0</div>
+          </div>
+          <div class="window-body">
+            <div class="w-section-title">File to sign</div>
+            <div class="w-field">
+              <div class="w-label">File:</div>
+              <div class="w-input">C:\builds\MyApp.exe</div>
+              <div class="w-btn">Browse...</div>
+            </div>
+            <div class="w-divider"></div>
+            <div style="display:flex;align-items:center;">
+              <div class="w-sign-btn">Sign File</div>
+              <div class="w-status">
+                <span style="width:7px;height:7px;background:#00FF88;border-radius:50%;display:inline-block;box-shadow:0 0 6px #00FF88;"></span>
+                OK — Signed successfully!
+              </div>
+            </div>
+          </div>
+          <div class="w-footer">
+            PublicTester QuickDigital Signature GUI v1.1.0 — by Sebastian Januchowski
+          </div>
+        </div>
+
+        <!-- Floating badge bottom -->
+        <div class="hero-badge b2">
+          <div class="badge-dot blue"></div>
+          SHA-256 · RFC&nbsp;3161 · DigiCert
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-strip">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num" data-target="9">0</div>
+      <div class="stat-label" data-i18n="stats.certs">Lokalizacji certyfikatów</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num" data-target="4">0</div>
+      <div class="stat-label" data-i18n="stats.arch">Architektury CPU</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num" data-target="0">0</div>
+      <div class="stat-label" style="position:relative;">
+        <span data-i18n="stats.blocking">Blokowanie UI</span>
+        <span style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--green);letter-spacing:0.05em;">async</span>
+      </div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num" data-target="256">0</div>
+      <div class="stat-label" data-i18n="stats.sha">SHA algorytm</div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="section-label reveal" data-i18n="feat.label">// funkcje</div>
+    <h2 class="section-title reveal">
+      <span data-i18n="feat.title1">Wszystko czego</span><br>
+      <span class="dim" data-i18n="feat.title2">potrzebujesz.</span>
+    </h2>
+    <div class="features-grid reveal">
+      <div class="feat-card">
+        <div class="feat-icon">🔍</div>
+        <div class="feat-title" data-i18n="feat.1.title">Auto-wykrywanie signtool</div>
+        <div class="feat-desc" data-i18n="feat.1.desc">Przeszukuje zasoby PyInstaller, katalog programu, wszystkie ścieżki Windows SDK 8.0–11+ (x64, x86, arm64, arm) i PATH systemu. Żadnej ręcznej konfiguracji.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📂</div>
+        <div class="feat-title" data-i18n="feat.2.title">Auto-wykrywanie certyfikatów</div>
+        <div class="feat-desc" data-i18n="feat.2.desc">Skanuje 9 lokalizacji Windows w określonej kolejności — od bundla PyInstaller po katalog certs/ i profil użytkownika. Deduplicacja przez realpath().</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title" data-i18n="feat.3.title">Asynchroniczne podpisywanie</div>
+        <div class="feat-desc" data-i18n="feat.3.desc">Proces signtool.exe działa w wątku daemon. UI nigdy się nie blokuje. Wyniki przekazywane thread-safe przez root.after().</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🕐</div>
+        <div class="feat-title" data-i18n="feat.4.title">RFC 3161 Timestamp</div>
+        <div class="feat-desc" data-i18n="feat.4.desc">Znacznik czasu dodawany automatycznie przez https://timestamp.digicert.com z algorytmem SHA-256. Podpis ważny po wygaśnięciu certyfikatu.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📦</div>
+        <div class="feat-title" data-i18n="feat.5.title">PyInstaller ready</div>
+        <div class="feat-desc" data-i18n="feat.5.desc">Pełna obsługa trybu frozen. Zasoby wczytywane z sys._MEIPASS. Kompilacja do standalone .exe jedną komendą — bez żadnych zmian w kodzie.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📋</div>
+        <div class="feat-title" data-i18n="feat.6.title">Dziennik operacji</div>
+        <div class="feat-desc" data-i18n="feat.6.desc">Każde podpisanie rejestrowane w sign.log — data, ścieżka pliku, certyfikat, wynik. Pełna diagnostyka błędów signtool w STDOUT i STDERR.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FLOW -->
+<section class="flow" id="flow">
+  <div class="wrap">
+    <div class="flow-grid">
+      <div>
+        <div class="section-label reveal" data-i18n="flow.label">// jak to działa</div>
+        <h2 class="section-title reveal" style="margin-bottom:40px;">
+          <span data-i18n="flow.title1">Siedem kroków</span><br>
+          <span class="dim" data-i18n="flow.title2">do bezpiecznego podpisu.</span>
+        </h2>
+        <div class="flow-steps reveal">
+          <div class="flow-step">
+            <div class="step-num">01</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="flow.1.t">Uruchom aplikację</div>
+              <div class="step-desc" data-i18n="flow.1.d">python main.py lub QuickDigitalSignature.exe — bez instalacji SDK.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">02</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="flow.2.t">Wybierz plik</div>
+              <div class="step-desc" data-i18n="flow.2.d">Browse... → .exe, .dll, .msi, .cab lub dowolny inny plik PE.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">03</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="flow.3.t">Certyfikat auto-wykryty</div>
+              <div class="step-desc" data-i18n="flow.3.d">Aplikacja automatycznie znajduje .pfx z katalogu certs/ lub profilu Windows.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">04</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="flow.4.t">Kliknij Sign File</div>
+              <div class="step-desc" data-i18n="flow.4.d">Walidacja wejść, budowa argumentów, start wątku daemon.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">05</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="flow.5.t">Podpisywanie w tle</div>
+              <div class="step-desc" data-i18n="flow.5.d">signtool.exe sign /fd sha256 /tr https://... — UI pozostaje responsywny.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">06</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="flow.6.t">Znacznik czasu RFC 3161</div>
+              <div class="step-desc" data-i18n="flow.6.d">Połączenie z timestamp.digicert.com, zapis znacznika SHA-256 w podpisie.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num">07</div>
+            <div class="step-content">
+              <div class="step-title" data-i18n="flow.7.t">Wynik w głównym wątku</div>
+              <div class="step-desc" data-i18n="flow.7.d">root.after() przekazuje sukces lub błąd — pełny log w sign.log.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="terminal">
+          <div class="term-bar">
+            <div class="term-dots">
+              <div class="term-dot r"></div>
+              <div class="term-dot y"></div>
+              <div class="term-dot g"></div>
+            </div>
+            <div class="term-title">sign.log — terminal</div>
+          </div>
+          <div class="term-body" id="terminal-body">
+            <div class="term-line"><span class="term-prompt">$</span><span class="term-cmd">python main.py</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-info">INFO  signtool found (SDK): ...Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-info">INFO  Certificates found: 2</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-info">INFO  Starting sign: C:\builds\MyApp.exe  cert=MyCert.pfx</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-out">      signtool.exe sign /fd sha256 /f MyCert.pfx</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-out">        /tr https://timestamp.digicert.com /td sha256</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-out">        C:\builds\MyApp.exe</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-ok">Done Adding Additional Store</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span><span class="term-ok">Successfully signed: C:\builds\MyApp.exe</span></div>
+            <div class="term-line"><span class="term-out">&nbsp;</span></div>
+            <div class="term-line"><span class="term-prompt">$</span><span class="term-cmd"><span class="term-cursor"></span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENSHOT -->
+<section class="screenshot-sec" id="screenshot">
+  <div class="wrap">
+    <div class="section-label reveal" style="text-align:center;" data-i18n="ss.label">// podgląd</div>
+    <h2 class="section-title reveal" style="text-align:center; margin-bottom:60px;">
+      <span data-i18n="ss.title1">Aplikacja w akcji.</span><br>
+      <span class="dim" data-i18n="ss.title2">Minimalistyczny, skuteczny.</span>
+    </h2>
+    <div class="screenshot-frame reveal">
+      <div class="screenshot-glow"></div>
+      <div class="screenshot-window">
+        <div class="ss-chrome">
+          <div class="wdots">
+            <div class="wd r"></div>
+            <div class="wd y"></div>
+            <div class="wd g"></div>
+          </div>
+          <div class="ss-title">PublicTester QuickDigital Signature GUI — v1.1.0</div>
+        </div>
+        <img src="Screenshot.png" alt="PublicTester QuickDigital Signature GUI - zrzut ekranu aplikacji" class="ss-img">
+      </div>
+    </div>
+    <p style="text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--text-dim); margin-top:24px;">
+      <span data-i18n="ss.caption">Rysunek 1. Główne okno aplikacji — tryb minimalny (MINIMAL_GUI = True)</span>
+    </p>
+  </div>
+</section>
+
+<!-- TECH -->
+<section class="tech" id="tech">
+  <div class="wrap">
+    <div class="section-label reveal" data-i18n="tech.label">// stos technologiczny</div>
+    <h2 class="section-title reveal">
+      <span data-i18n="tech.title1">Zbudowane na</span><br>
+      <span class="dim" data-i18n="tech.title2">solidnych fundamentach.</span>
+    </h2>
+    <div class="tech-grid reveal">
+      <div class="tech-card">
+        <div class="tech-badge">Runtime</div>
+        <div class="tech-name">Python</div>
+        <div class="tech-ver">3.10+ required · 3.12 recommended</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-badge">GUI</div>
+        <div class="tech-name">Tkinter</div>
+        <div class="tech-ver">stdlib · zero dependencies</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-badge" data-i18n="tech.signing">Podpisywanie</div>
+        <div class="tech-name">signtool</div>
+        <div class="tech-ver">Windows SDK 8.0 – 11+</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-badge" data-i18n="tech.graphics">Grafika</div>
+        <div class="tech-name">Pillow</div>
+        <div class="tech-ver">9.0+  ·  pip install Pillow</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-badge">Timestamp</div>
+        <div class="tech-name">DigiCert</div>
+        <div class="tech-ver">RFC 3161 · HTTPS · SHA-256</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-badge" data-i18n="tech.dist">Dystrybucja</div>
+        <div class="tech-name">PyInstaller</div>
+        <div class="tech-ver">--onefile --windowed · frozen mode</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-badge" data-i18n="tech.threads">Wątki</div>
+        <div class="tech-name">threading</div>
+        <div class="tech-ver">daemon thread · root.after()</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-badge" data-i18n="tech.log">Dziennik</div>
+        <div class="tech-name">logging</div>
+        <div class="tech-ver">FileHandler · sign.log</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section class="security" id="security">
+  <div class="wrap">
+    <div class="section-label reveal" data-i18n="sec.label">// bezpieczeństwo</div>
+    <div class="security-inner reveal">
+      <div>
+        <h2 class="section-title" style="margin-bottom:20px;">
+          <span data-i18n="sec.title1">Zaprojektowane</span><br>
+          <span class="dim" data-i18n="sec.title2">z myślą o bezpieczeństwie.</span>
+        </h2>
+        <p style="font-family:var(--font-mono); font-size:13px; color:var(--text-muted); line-height:1.8;">
+          <span data-i18n="sec.sub">Każdy aspekt podpisywania zaprojektowano minimalizując obszar ataku i ekspozycję wrażliwych danych.</span>
+        </p>
+      </div>
+      <div class="security-list">
+        <div class="sec-item">
+          <div class="sec-icon">🛡️</div>
+          <div>
+            <div class="sec-title" data-i18n="sec.1.t">shell=False · brak injection</div>
+            <div class="sec-desc" data-i18n="sec.1.d">subprocess.run() z listą argumentów. Zero ryzyka command injection nawet z niebezpiecznymi ścieżkami plików.</div>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-icon">🔐</div>
+          <div>
+            <div class="sec-title" data-i18n="sec.2.t">Hasło zerowane natychmiast</div>
+            <div class="sec-desc" data-i18n="sec.2.d">Slot /p w liście cmd jest nadpisywany pustym stringiem w bloku finally — minimalna ekspozycja hasła PFX w pamięci.</div>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-icon">🔒</div>
+          <div>
+            <div class="sec-title" data-i18n="sec.3.t">HTTPS timestamp</div>
+            <div class="sec-desc" data-i18n="sec.3.d">Serwer DigiCert połączony przez TLS (https://). Poprzednia wersja używała HTTP — poprawione w v1.1.0.</div>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-icon">✅</div>
+          <div>
+            <div class="sec-title" data-i18n="sec.4.t">Walidacja każdego wejścia</div>
+            <div class="sec-desc" data-i18n="sec.4.d">os.path.isfile() przed każdą operacją. Jasne komunikaty o błędach bez ujawniania ścieżek systemowych.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA / DOWNLOAD -->
+<section class="cta-section" id="download">
+  <div class="wrap">
+    <div class="cta-inner reveal">
+      <h2 class="cta-title">
+        <span data-i18n="cta.title1">Gotowy do podpisywania?</span><br>
+        <span style="background:linear-gradient(90deg,var(--blue-bright),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-i18n="cta.title2">Zacznij teraz.</span>
+      </h2>
+      <p class="cta-sub">
+        <span data-i18n="cta.sub">Pobierz v1.1.0 lub uruchom z kodu źródłowego. MIT License · open source · Windows 10/11.</span>
+      </p>
+      <div class="cta-actions">
+        <a href="#" class="btn-primary" style="font-size:15px; padding:16px 32px;">
+          <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;">
+            <path d="M8 12L3 7h3V2h4v5h3L8 12z" fill="currentColor"/>
+            <path d="M2 13h12v1H2v-1z" fill="currentColor"/>
+          </svg>
+          <span data-i18n="cta.btn1">Pobierz .exe (v1.1.0)</span>
+        </a>
+        <a href="#" class="btn-outline">
+          <svg viewBox="0 0 16 16" style="width:16px;height:16px;" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          <span data-i18n="cta.btn2">GitHub — kod źródłowy</span>
+        </a>
+      </div>
+      <div style="margin-top:40px; display:flex; justify-content:center; gap:32px; flex-wrap:wrap;">
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim); display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--green);">✓</span> MIT License
+        </div>
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim); display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--green);">✓</span> Windows 10 / 11
+        </div>
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim); display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--green);">✓</span> Python 3.10+
+        </div>
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim); display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--green);">✓</span> <span data-i18n="cta.noreg">Bez rejestracji</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-copy">
+      © 2024 Sebastian Januchowski · PublicTester QuickDigital Signature GUI v1.1.0
+    </div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#" data-i18n="footer.docs">Dokumentacja</a>
+      <a href="#" data-i18n="footer.license">Licencja MIT</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── CURSOR ──────────────────────────────────────────────────────────────────
+const dot  = document.getElementById('cursorDot');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  dot.style.left  = mx + 'px';
+  dot.style.top   = my + 'px';
+});
+
+function animRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top  = ry + 'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+document.querySelectorAll('a, button, .feat-card, .tech-card, .flow-step').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    ring.style.width  = '56px';
+    ring.style.height = '56px';
+    ring.style.opacity = '0.9';
+    ring.style.borderColor = 'var(--cyan)';
+  });
+  el.addEventListener('mouseleave', () => {
+    ring.style.width  = '36px';
+    ring.style.height = '36px';
+    ring.style.opacity = '0.6';
+    ring.style.borderColor = 'var(--blue-bright)';
+  });
+});
+
+// ── CANVAS PARTICLES ────────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas-bg');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const PARTICLE_COUNT = 80;
+const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+  x: Math.random() * window.innerWidth,
+  y: Math.random() * window.innerHeight,
+  r: Math.random() * 1.5 + 0.3,
+  vx: (Math.random() - 0.5) * 0.3,
+  vy: (Math.random() - 0.5) * 0.3,
+  a: Math.random(),
+}));
+
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw connections
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 140) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0,120,212,${0.15 * (1 - dist/140)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw particles
+  particles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0,180,255,${p.a * 0.6})`;
+    ctx.fill();
+
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = canvas.width;
+    if (p.x > canvas.width) p.x = 0;
+    if (p.y < 0) p.y = canvas.height;
+    if (p.y > canvas.height) p.y = 0;
+  });
+
+  // Mouse repulsion
+  particles.forEach(p => {
+    const dx = p.x - mx, dy = p.y - my;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 100) {
+      p.vx += dx / dist * 0.08;
+      p.vy += dy / dist * 0.08;
+    }
+    // Damping
+    p.vx *= 0.99; p.vy *= 0.99;
+    // Min speed
+    const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+    if (speed < 0.1) { p.vx += (Math.random()-0.5)*0.05; p.vy += (Math.random()-0.5)*0.05; }
+    if (speed > 1.5) { p.vx *= 0.8; p.vy *= 0.8; }
+  });
+
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// ── NAV SCROLL ──────────────────────────────────────────────────────────────
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// ── SCROLL REVEAL ───────────────────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── COUNTER ANIMATION ───────────────────────────────────────────────────────
+const counters = document.querySelectorAll('.stat-num[data-target]');
+const cObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const target = parseInt(e.target.dataset.target);
+      const suffix = e.target.dataset.suffix || '';
+      let current = 0;
+      const step = target / 40;
+      const timer = setInterval(() => {
+        current = Math.min(current + Math.ceil(step) || 1, target);
+        e.target.textContent = current + suffix;
+        if (current >= target) clearInterval(timer);
+      }, 30);
+      cObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.5 });
+
+counters.forEach(c => cObs.observe(c));
+
+// ── TYPING TERMINAL ─────────────────────────────────────────────────────────
+// Already static — just add staggered fade-in
+document.querySelectorAll('.term-line').forEach((line, i) => {
+  line.style.opacity = '0';
+  line.style.transition = 'opacity 0.3s';
+  setTimeout(() => { line.style.opacity = '1'; }, 800 + i * 120);
+});
+
+/* ── i18n ─────────────────────────────────────────────────────────────────── */
+const TRANSLATIONS = {
+  en: {
+    'nav.features':'Features','nav.flow':'How it works','nav.security':'Security',
+    'nav.screenshot':'Screenshot','nav.download':'Download v1.1.0',
+    'hero.eyebrow':'Windows · Python 3.10+ · v1.1.0',
+    'hero.line1':'Sign files','hero.line2':'digitally.','hero.line3':'Effortlessly.',
+    'hero.desc':'A GUI wrapper for <strong>signtool.exe</strong> on Windows. Auto-detected certificates, async signing and RFC\u00a03161 timestamping — all in one window.',
+    'hero.cta':'Download now','hero.preview':'Preview app →',
+    'stats.certs':'Certificate locations','stats.arch':'CPU architectures',
+    'stats.blocking':'UI blocking','stats.sha':'SHA algorithm',
+    'feat.label':'// features','feat.title1':'Everything you','feat.title2':'need.',
+    'feat.1.title':'Auto-detect signtool',
+    'feat.1.desc':'Searches PyInstaller bundle, program directory, all Windows SDK 8.0–11+ paths (x64, x86, arm64, arm) and system PATH. Zero manual configuration.',
+    'feat.2.title':'Auto-detect certificates',
+    'feat.2.desc':'Scans 9 Windows locations in priority order — from PyInstaller bundle to certs/ folder and user profile. Deduplication via realpath().',
+    'feat.3.title':'Async signing',
+    'feat.3.desc':'signtool.exe runs on a daemon thread. The UI never freezes. Results dispatched thread-safely via root.after().',
+    'feat.4.title':'RFC 3161 Timestamp',
+    'feat.4.desc':'Timestamp applied automatically via https://timestamp.digicert.com with SHA-256. Signature remains valid after certificate expiry.',
+    'feat.5.title':'PyInstaller ready',
+    'feat.5.desc':'Full frozen mode support. Resources loaded from sys._MEIPASS. Compile to standalone .exe in one command — no code changes needed.',
+    'feat.6.title':'Operation log',
+    'feat.6.desc':'Every signing recorded in sign.log — timestamp, file path, certificate, result. Full signtool STDOUT/STDERR diagnostic output.',
+    'flow.label':'// how it works','flow.title1':'Seven steps','flow.title2':'to a secure signature.',
+    'flow.1.t':'Launch the app','flow.1.d':'python main.py or QuickDigitalSignature.exe — no SDK installation needed.',
+    'flow.2.t':'Select a file','flow.2.d':'Browse... → .exe, .dll, .msi, .cab or any other PE file.',
+    'flow.3.t':'Certificate auto-found','flow.3.d':'App automatically locates .pfx from certs/ folder or Windows user profile.',
+    'flow.4.t':'Click Sign File','flow.4.d':'Input validation, argument build, daemon thread start.',
+    'flow.5.t':'Background signing','flow.5.d':'signtool.exe sign /fd sha256 /tr https://... — UI stays responsive.',
+    'flow.6.t':'RFC 3161 timestamp','flow.6.d':'Connects to timestamp.digicert.com, writes SHA-256 timestamp into the signature.',
+    'flow.7.t':'Result in main thread','flow.7.d':'root.after() delivers success or error — full log written to sign.log.',
+    'ss.label':'// preview','ss.title1':'App in action.','ss.title2':'Minimal, effective.',
+    'ss.caption':'Figure 1. Main application window — minimal mode (MINIMAL_GUI = True)',
+    'tech.label':'// tech stack','tech.title1':'Built on','tech.title2':'solid foundations.',
+    'tech.signing':'Signing','tech.graphics':'Graphics','tech.dist':'Distribution',
+    'tech.threads':'Threads','tech.log':'Log',
+    'sec.label':'// security','sec.title1':'Designed','sec.title2':'with security in mind.',
+    'sec.sub':'Every aspect of the signing process is designed to minimise the attack surface and exposure of sensitive data.',
+    'sec.1.t':'shell=False · no injection',
+    'sec.1.d':'subprocess.run() with argument list. Zero command injection risk even with dangerous file paths.',
+    'sec.2.t':'Password zeroed immediately',
+    'sec.2.d':'The /p slot in the cmd list is overwritten with an empty string in the finally block — minimal PFX password exposure in memory.',
+    'sec.3.t':'HTTPS timestamp',
+    'sec.3.d':'DigiCert server connected via TLS (https://). Previous version used HTTP — fixed in v1.1.0.',
+    'sec.4.t':'Every input validated',
+    'sec.4.d':'os.path.isfile() before every operation. Clear error messages without exposing system paths.',
+    'cta.title1':'Ready to sign?','cta.title2':'Start now.',
+    'cta.sub':'Download v1.1.0 or run from source. MIT License · open source · Windows 10/11.',
+    'cta.btn1':'Download .exe (v1.1.0)','cta.btn2':'GitHub — source code',
+    'cta.noreg':'No registration',
+    'footer.docs':'Documentation','footer.license':'MIT License',
+  },
+  pl: {
+    'nav.features':'Funkcje','nav.flow':'Jak działa','nav.security':'Bezpieczeństwo',
+    'nav.screenshot':'Zrzut ekranu','nav.download':'Pobierz v1.1.0',
+    'hero.eyebrow':'Windows · Python 3.10+ · v1.1.0',
+    'hero.line1':'Podpisuj pliki','hero.line2':'cyfrowo.','hero.line3':'Bez wysiłku.',
+    'hero.desc':'Graficzny interfejs do <strong>signtool.exe</strong> dla Windows. Auto-wykrywanie certyfikatów, asynchroniczne podpisywanie i znacznik czasu RFC\u00a03161 — wszystko w jednym oknie.',
+    'hero.cta':'Pobierz teraz','hero.preview':'Podgląd aplikacji →',
+    'stats.certs':'Lokalizacji certyfikatów','stats.arch':'Architektury CPU',
+    'stats.blocking':'Blokowanie UI','stats.sha':'SHA algorytm',
+    'feat.label':'// funkcje','feat.title1':'Wszystko czego','feat.title2':'potrzebujesz.',
+    'feat.1.title':'Auto-wykrywanie signtool',
+    'feat.1.desc':'Przeszukuje zasoby PyInstaller, katalog programu, wszystkie ścieżki Windows SDK 8.0–11+ (x64, x86, arm64, arm) i PATH systemu. Żadnej ręcznej konfiguracji.',
+    'feat.2.title':'Auto-wykrywanie certyfikatów',
+    'feat.2.desc':'Skanuje 9 lokalizacji Windows w określonej kolejności — od bundla PyInstaller po katalog certs/ i profil użytkownika. Deduplicacja przez realpath().',
+    'feat.3.title':'Asynchroniczne podpisywanie',
+    'feat.3.desc':'Proces signtool.exe działa w wątku daemon. UI nigdy się nie blokuje. Wyniki przekazywane thread-safe przez root.after().',
+    'feat.4.title':'RFC 3161 Timestamp',
+    'feat.4.desc':'Znacznik czasu dodawany automatycznie przez https://timestamp.digicert.com z algorytmem SHA-256. Podpis ważny po wygaśnięciu certyfikatu.',
+    'feat.5.title':'PyInstaller ready',
+    'feat.5.desc':'Pełna obsługa trybu frozen. Zasoby wczytywane z sys._MEIPASS. Kompilacja do standalone .exe jedną komendą — bez żadnych zmian w kodzie.',
+    'feat.6.title':'Dziennik operacji',
+    'feat.6.desc':'Każde podpisanie rejestrowane w sign.log — data, ścieżka pliku, certyfikat, wynik. Pełna diagnostyka błędów signtool w STDOUT i STDERR.',
+    'flow.label':'// jak to działa','flow.title1':'Siedem kroków','flow.title2':'do bezpiecznego podpisu.',
+    'flow.1.t':'Uruchom aplikację','flow.1.d':'python main.py lub QuickDigitalSignature.exe — bez instalacji SDK.',
+    'flow.2.t':'Wybierz plik','flow.2.d':'Browse... → .exe, .dll, .msi, .cab lub dowolny inny plik PE.',
+    'flow.3.t':'Certyfikat auto-wykryty','flow.3.d':'Aplikacja automatycznie znajduje .pfx z katalogu certs/ lub profilu Windows.',
+    'flow.4.t':'Kliknij Sign File','flow.4.d':'Walidacja wejść, budowa argumentów, start wątku daemon.',
+    'flow.5.t':'Podpisywanie w tle','flow.5.d':'signtool.exe sign /fd sha256 /tr https://... — UI pozostaje responsywny.',
+    'flow.6.t':'Znacznik czasu RFC 3161','flow.6.d':'Połączenie z timestamp.digicert.com, zapis znacznika SHA-256 w podpisie.',
+    'flow.7.t':'Wynik w głównym wątku','flow.7.d':'root.after() przekazuje sukces lub błąd — pełny log w sign.log.',
+    'ss.label':'// podgląd','ss.title1':'Aplikacja w akcji.','ss.title2':'Minimalistyczny, skuteczny.',
+    'ss.caption':'Rysunek 1. Główne okno aplikacji — tryb minimalny (MINIMAL_GUI = True)',
+    'tech.label':'// stos technologiczny','tech.title1':'Zbudowane na','tech.title2':'solidnych fundamentach.',
+    'tech.signing':'Podpisywanie','tech.graphics':'Grafika','tech.dist':'Dystrybucja',
+    'tech.threads':'Wątki','tech.log':'Dziennik',
+    'sec.label':'// bezpieczeństwo','sec.title1':'Zaprojektowane','sec.title2':'z myślą o bezpieczeństwie.',
+    'sec.sub':'Każdy aspekt podpisywania zaprojektowano minimalizując obszar ataku i ekspozycję wrażliwych danych.',
+    'sec.1.t':'shell=False · brak injection',
+    'sec.1.d':'subprocess.run() z listą argumentów. Zero ryzyka command injection nawet z niebezpiecznymi ścieżkami plików.',
+    'sec.2.t':'Hasło zerowane natychmiast',
+    'sec.2.d':'Slot /p w liście cmd jest nadpisywany pustym stringiem w bloku finally — minimalna ekspozycja hasła PFX w pamięci.',
+    'sec.3.t':'HTTPS timestamp',
+    'sec.3.d':'Serwer DigiCert połączony przez TLS (https://). Poprzednia wersja używała HTTP — poprawione w v1.1.0.',
+    'sec.4.t':'Walidacja każdego wejścia',
+    'sec.4.d':'os.path.isfile() przed każdą operacją. Jasne komunikaty o błędach bez ujawniania ścieżek systemowych.',
+    'cta.title1':'Gotowy do podpisywania?','cta.title2':'Zacznij teraz.',
+    'cta.sub':'Pobierz v1.1.0 lub uruchom z kodu źródłowego. MIT License · open source · Windows 10/11.',
+    'cta.btn1':'Pobierz .exe (v1.1.0)','cta.btn2':'GitHub — kod źródłowy',
+    'cta.noreg':'Bez rejestracji',
+    'footer.docs':'Dokumentacja','footer.license':'Licencja MIT',
+  }
+};
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  if (lang === currentLang) return;
+  currentLang = lang;
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-pl').classList.toggle('active', lang === 'pl');
+  document.documentElement.lang = lang;
+  document.body.classList.add('lang-switching');
+  setTimeout(() => {
+    const dict = TRANSLATIONS[lang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (dict[key] !== undefined) el.innerHTML = dict[key];
+    });
+    document.body.classList.remove('lang-switching');
+  }, 160);
+  try { sessionStorage.setItem('qdlang', lang); } catch(e) {}
+}
+
+// Restore saved language
+try { const s = sessionStorage.getItem('qdlang'); if (s === 'pl') setLang('pl'); } catch(e) {}
+</script>
+</body>
+</html>

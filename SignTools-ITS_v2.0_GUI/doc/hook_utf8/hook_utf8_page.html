@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hook_utf8.py — PyInstaller UTF-8 Runtime Hook</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --code-bg: #1f2937;
+    --warn: #d29922;
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,17,23,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 56px;
+  }
+
+  .nav-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 1rem;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .nav-logo span { color: var(--muted); }
+
+  .lang-switcher {
+    display: flex; gap: 6px; align-items: center;
+  }
+
+  .lang-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    cursor: pointer; transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .lang-btn.active {
+    background: var(--accent); color: #0d1117;
+    border-color: var(--accent);
+  }
+
+  .lang-btn:hover:not(.active) {
+    border-color: var(--accent); color: var(--accent);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 5rem 2rem 4rem;
+    max-width: 860px; margin: 0 auto;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.1em;
+    color: var(--accent); text-transform: uppercase;
+    border: 1px solid rgba(88,166,255,0.3);
+    background: rgba(88,166,255,0.05);
+    padding: 5px 14px; border-radius: 20px;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-badge::before { content: '⚡'; }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800; letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 1.2rem;
+  }
+
+  h1 code {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    background: rgba(88,166,255,0.08);
+    padding: 2px 10px; border-radius: 6px;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem; color: var(--muted);
+    max-width: 580px; margin: 0 auto 2rem;
+  }
+
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem; }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; padding: 3px 10px; border-radius: 4px;
+    font-weight: 700; letter-spacing: 0.04em;
+  }
+
+  .badge-blue   { background: rgba(88,166,255,0.15);  color: var(--accent);  border: 1px solid rgba(88,166,255,0.3); }
+  .badge-green  { background: rgba(63,185,80,0.15);   color: var(--accent2); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-purple { background: rgba(210,168,255,0.15); color: var(--accent4); border: 1px solid rgba(210,168,255,0.3); }
+
+  /* ── TERMINAL DEMO ── */
+  .terminal-wrap {
+    background: #010409; border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden; margin: 0 auto 3rem;
+    max-width: 640px; text-align: left;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+
+  .term-bar {
+    background: #1c2128; padding: 10px 16px;
+    display: flex; gap: 7px; align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .term-title { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-left: 8px; }
+
+  .term-body { padding: 1.2rem 1.4rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.8; }
+  .term-prompt { color: var(--accent2); }
+  .term-cmd { color: var(--text); }
+  .term-ok { color: var(--accent2); }
+  .term-before { color: var(--accent3); }
+  .term-after  { color: var(--accent2); }
+  .term-dim { color: var(--muted); font-style: italic; }
+
+  /* ── CONTENT ── */
+  .content { max-width: 860px; margin: 0 auto; padding: 0 2rem 5rem; }
+
+  section { margin-bottom: 3.5rem; }
+
+  h2 {
+    font-size: 1.4rem; font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.4rem;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  h2 .icon { font-size: 1.1rem; }
+
+  p { color: #c9d1d9; line-height: 1.75; margin-bottom: 1rem; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── BUGS TABLE ── */
+  .bugs-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .bug-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    transition: border-left-color 0.2s;
+  }
+
+  .bug-card.fixed { border-left-color: var(--accent2); }
+
+  .bug-header {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 0.4rem;
+  }
+
+  .bug-sev {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 3px; white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  .sev-high   { background: rgba(247,129,102,0.2); color: var(--accent3); }
+  .sev-med    { background: rgba(210,153,34,0.2);  color: var(--warn);    }
+  .sev-low    { background: rgba(88,166,255,0.15); color: var(--accent);  }
+  .sev-info   { background: rgba(210,168,255,0.15);color: var(--accent4); }
+
+  .bug-title { font-weight: 700; font-size: 0.95rem; }
+  .bug-desc  { color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
+
+  /* ── CODE ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem 1.4rem;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.75;
+    color: #c9d1d9;
+    margin: 1rem 0;
+  }
+
+  pre .c  { color: var(--muted); font-style: italic; }
+  pre .k  { color: var(--accent4); }
+  pre .s  { color: var(--accent2); }
+  pre .f  { color: var(--accent); }
+  pre .n  { color: #ffa657; }
+
+  /* ── INSTALL STEPS ── */
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+
+  .step {
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+
+  .step-num {
+    min-width: 32px; height: 32px;
+    background: rgba(88,166,255,0.1);
+    border: 1px solid rgba(88,166,255,0.3);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem; font-weight: 700; color: var(--accent);
+    flex-shrink: 0; margin-top: 2px;
+  }
+
+  .step-body { flex: 1; }
+  .step-body strong { display: block; margin-bottom: 0.3rem; }
+
+  /* ── COMPAT ── */
+  .compat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+
+  .compat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    text-align: center;
+  }
+
+  .compat-card .py-ver {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem; font-weight: 700;
+    color: var(--text); display: block; margin-bottom: 6px;
+  }
+
+  .compat-icons { font-size: 0.9rem; }
+  .compat-note { font-size: 0.7rem; color: var(--warn); margin-top: 4px; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem; color: var(--muted);
+  }
+
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* ── I18N HIDE ── */
+  [data-lang] { display: none; }
+  [data-lang].visible { display: block; }
+  [data-lang-inline] { display: none; }
+  [data-lang-inline].visible { display: inline; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">hook_utf8<span>.py</span></span>
+  <div class="lang-switcher">
+    <button class="lang-btn active" onclick="setLang('en')" id="btn-en">EN</button>
+    <button class="lang-btn" onclick="setLang('pl')" id="btn-pl">PL</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">
+    <span data-lang="en" class="visible">PyInstaller Runtime Hook</span>
+    <span data-lang="pl">Hook Startowy PyInstaller</span>
+  </div>
+
+  <h1><code>hook_utf8.py</code></h1>
+
+  <p class="hero-sub">
+    <span data-lang-inline="en" class="visible">Forces UTF-8 encoding on all I/O streams before any application code runs. No more garbled characters on Windows.</span>
+    <span data-lang-inline="pl">Wymusza kodowanie UTF-8 na wszystkich strumieniach I/O przed uruchomieniem kodu aplikacji. Koniec ze zniekształconymi znakami na Windows.</span>
+  </p>
+
+  <div class="badges">
+    <span class="badge badge-blue">Python 3.7+</span>
+    <span class="badge badge-green">Windows · Linux · macOS</span>
+    <span class="badge badge-purple">MIT License</span>
+    <span class="badge badge-blue">v1.1.0 fixed</span>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="terminal-wrap">
+    <div class="term-bar">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+      <span class="term-title">cmd.exe — Windows</span>
+    </div>
+    <div class="term-body">
+      <div class="term-dim">
+        <span data-lang-inline="en" class="visible"># WITHOUT hook (cp1250)</span>
+        <span data-lang-inline="pl"># BEZ hooka (cp1250)</span>
+      </div>
+      <div><span class="term-prompt">C:\&gt; </span><span class="term-cmd">dist\myapp.exe</span></div>
+      <div><span class="term-before">Witaj Å›wiecie! PolskiÄ&#x3F; ← ✗ garbled</span></div>
+      <br>
+      <div class="term-dim">
+        <span data-lang-inline="en" class="visible"># WITH hook_utf8.py</span>
+        <span data-lang-inline="pl"># Z hook_utf8.py</span>
+      </div>
+      <div><span class="term-prompt">C:\&gt; </span><span class="term-cmd">dist\myapp.exe</span></div>
+      <div><span class="term-ok">stdout → utf-8 ✓  stderr → utf-8 ✓  stdin → utf-8 ✓</span></div>
+      <div><span class="term-after">Witaj świecie! Cześć! Привет! 你好! ← ✓</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- PROBLEM -->
+  <section>
+    <h2>
+      <span class="icon">🔍</span>
+      <span data-lang-inline="en" class="visible">The Problem</span>
+      <span data-lang-inline="pl">Problem</span>
+    </h2>
+    <div data-lang="en" class="visible">
+      <p>On Windows, Python defaults to the system code page — <code>cp1250</code>, <code>cp852</code>, or <code>cp1251</code> — depending on the locale. When a PyInstaller-packaged executable tries to print non-ASCII characters (Polish, Cyrillic, CJK), the output is corrupted or the app raises a <code>UnicodeEncodeError</code> and crashes.</p>
+      <p>A runtime hook solves this at the root: it runs <em>before</em> <code>__main__</code> and all imports, setting UTF-8 before any character can be mishandled.</p>
+    </div>
+    <div data-lang="pl">
+      <p>Na systemie Windows Python domyślnie używa strony kodowej systemu — <code>cp1250</code>, <code>cp852</code> lub <code>cp1251</code> — w zależności od ustawień regionalnych. Gdy plik wykonywalny spakowany przez PyInstaller próbuje wypisać znaki spoza ASCII (polskie, cyrylicę, CJK), wynik jest zniekształcony lub aplikacja rzuca <code>UnicodeEncodeError</code> i crashuje.</p>
+      <p>Hook startowy rozwiązuje to u źródła: uruchamia się <em>przed</em> <code>__main__</code> i wszystkimi importami, ustawiając UTF-8 zanim jakikolwiek znak może zostać błędnie obsłużony.</p>
+    </div>
+  </section>
+
+  <!-- BUGS FIXED -->
+  <section>
+    <h2>
+      <span class="icon">🐛</span>
+      <span data-lang-inline="en" class="visible">Bugs Fixed</span>
+      <span data-lang-inline="pl">Naprawione Błędy</span>
+    </h2>
+
+    <div class="bugs-grid">
+
+      <div class="bug-card fixed">
+        <div class="bug-header">
+          <span class="bug-sev sev-high">HIGH</span>
+          <span class="bug-title">
+            <span data-lang-inline="en" class="visible">sys.stdin not reconfigured</span>
+            <span data-lang-inline="pl">sys.stdin nie był rekonfigurowany</span>
+          </span>
+        </div>
+        <p class="bug-desc">
+          <span data-lang-inline="en" class="visible">Reading UTF-8 piped input could raise UnicodeDecodeError or produce silent corruption. Fixed: added <code>_reconfigure(sys.stdin, ...)</code>.</span>
+          <span data-lang-inline="pl">Odczyt potokowego wejścia UTF-8 mógł rzucić UnicodeDecodeError lub produkować ciche uszkodzenia. Naprawa: dodano <code>_reconfigure(sys.stdin, ...)</code>.</span>
+        </p>
+      </div>
+
+      <div class="bug-card fixed">
+        <div class="bug-header">
+          <span class="bug-sev sev-med">MED</span>
+          <span class="bug-title">
+            <span data-lang-inline="en" class="visible">stderr used errors='replace'</span>
+            <span data-lang-inline="pl">stderr używał errors='replace'</span>
+          </span>
+        </div>
+        <p class="bug-desc">
+          <span data-lang-inline="en" class="visible">Replacing undecodable diagnostic bytes with '?' destroys forensic information. Fixed: stderr now uses <code>errors='backslashreplace'</code>.</span>
+          <span data-lang-inline="pl">Zastępowanie nierozkodowalnych bajtów diagnostycznych znakiem '?' niszczy informacje potrzebne do debugowania. Naprawa: stderr używa teraz <code>errors='backslashreplace'</code>.</span>
+        </p>
+      </div>
+
+      <div class="bug-card fixed">
+        <div class="bug-header">
+          <span class="bug-sev sev-med">MED</span>
+          <span class="bug-title">
+            <span data-lang-inline="en" class="visible">Silent exception suppression</span>
+            <span data-lang-inline="pl">Ciche tłumienie wyjątków</span>
+          </span>
+        </div>
+        <p class="bug-desc">
+          <span data-lang-inline="en" class="visible"><code>except Exception: pass</code> — failures were invisible. Fixed: now emits a diagnostic line to stderr so developers know the hook failed.</span>
+          <span data-lang-inline="pl"><code>except Exception: pass</code> — błędy były niewidoczne. Naprawa: teraz emituje linię diagnostyczną do stderr, by deweloperzy wiedzieli, że hook nie zadziałał.</span>
+        </p>
+      </div>
+
+      <div class="bug-card fixed">
+        <div class="bug-header">
+          <span class="bug-sev sev-low">LOW</span>
+          <span class="bug-title">
+            <span data-lang-inline="en" class="visible">Weak type guard (hasattr only)</span>
+            <span data-lang-inline="pl">Słabe sprawdzenie typu (tylko hasattr)</span>
+          </span>
+        </div>
+        <p class="bug-desc">
+          <span data-lang-inline="en" class="visible">Custom stream wrappers could have a <code>reconfigure</code> attribute with different semantics. Fixed: added <code>isinstance(io.TextIOWrapper)</code> check.</span>
+          <span data-lang-inline="pl">Niestandardowe wrappery strumieni mogły mieć atrybut <code>reconfigure</code> o innej semantyce. Naprawa: dodano sprawdzenie <code>isinstance(io.TextIOWrapper)</code>.</span>
+        </p>
+      </div>
+
+      <div class="bug-card fixed">
+        <div class="bug-header">
+          <span class="bug-sev sev-low">LOW</span>
+          <span class="bug-title">
+            <span data-lang-inline="en" class="visible">PYTHONUTF8 set unconditionally</span>
+            <span data-lang-inline="pl">PYTHONUTF8 ustawiany bezwarunkowo</span>
+          </span>
+        </div>
+        <p class="bug-desc">
+          <span data-lang-inline="en" class="visible">PYTHONUTF8 requires Python ≥ 3.7. Fixed: guarded by <code>sys.version_info &gt;= (3, 7)</code>, with a <code>warnings.warn</code> on older versions.</span>
+          <span data-lang-inline="pl">PYTHONUTF8 wymaga Pythona ≥ 3.7. Naprawa: zabezpieczono przez <code>sys.version_info &gt;= (3, 7)</code>, ze <code>warnings.warn</code> dla starszych wersji.</span>
+        </p>
+      </div>
+
+      <div class="bug-card fixed">
+        <div class="bug-header">
+          <span class="bug-sev sev-info">INFO</span>
+          <span class="bug-title">
+            <span data-lang-inline="en" class="visible">Missing __all__ declaration</span>
+            <span data-lang-inline="pl">Brak deklaracji __all__</span>
+          </span>
+        </div>
+        <p class="bug-desc">
+          <span data-lang-inline="en" class="visible">PyInstaller's hook scanner could accidentally pick up module-level names. Fixed: added <code>__all__: list = []</code>.</span>
+          <span data-lang-inline="pl">Skaner hooków PyInstaller mógł przypadkowo pobrać nazwy na poziomie modułu. Naprawa: dodano <code>__all__: list = []</code>.</span>
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section>
+    <h2>
+      <span class="icon">🚀</span>
+      <span data-lang-inline="en" class="visible">Installation</span>
+      <span data-lang-inline="pl">Instalacja</span>
+    </h2>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <strong>
+            <span data-lang-inline="en" class="visible">Copy the file to your project</span>
+            <span data-lang-inline="pl">Skopiuj plik do projektu</span>
+          </strong>
+          <pre>myproject/
+├── myapp.py
+├── myapp.spec
+└── hooks/
+    └── hook_utf8.py</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <strong>
+            <span data-lang-inline="en" class="visible">Add to your .spec file</span>
+            <span data-lang-inline="pl">Dodaj do pliku .spec</span>
+          </strong>
+          <pre><span class="c"># myapp.spec</span>
+a = Analysis(
+    [<span class="s">'myapp.py'</span>],
+    ...
+    runtime_hooks=[<span class="s">'hooks/hook_utf8.py'</span>],
+    ...
+)</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <strong>
+            <span data-lang-inline="en" class="visible">Or use the CLI</span>
+            <span data-lang-inline="pl">Lub użyj linii poleceń</span>
+          </strong>
+          <pre>pyinstaller myapp.py \
+    --runtime-hook hooks/hook_utf8.py \
+    --onefile</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPAT -->
+  <section>
+    <h2>
+      <span class="icon">📋</span>
+      <span data-lang-inline="en" class="visible">Compatibility</span>
+      <span data-lang-inline="pl">Zgodność</span>
+    </h2>
+
+    <div class="compat-grid">
+      <div class="compat-card">
+        <span class="py-ver">Python 3.6</span>
+        <div class="compat-icons">⚠️</div>
+        <div class="compat-note">
+          <span data-lang-inline="en" class="visible">Partial</span>
+          <span data-lang-inline="pl">Częściowa</span>
+        </div>
+      </div>
+      <div class="compat-card"><span class="py-ver">Python 3.7</span><div class="compat-icons">✅</div></div>
+      <div class="compat-card"><span class="py-ver">Python 3.8</span><div class="compat-icons">✅</div></div>
+      <div class="compat-card"><span class="py-ver">Python 3.9</span><div class="compat-icons">✅</div></div>
+      <div class="compat-card"><span class="py-ver">Python 3.10</span><div class="compat-icons">✅</div></div>
+      <div class="compat-card"><span class="py-ver">Python 3.11</span><div class="compat-icons">✅</div></div>
+      <div class="compat-card"><span class="py-ver">Python 3.12</span><div class="compat-icons">✅</div></div>
+      <div class="compat-card"><span class="py-ver">Python 3.13</span><div class="compat-icons">✅</div></div>
+    </div>
+    <p style="margin-top:1rem; color: var(--muted); font-size: 0.88rem;">
+      PyInstaller 3.x · 4.x · 5.x · 6.x &nbsp;|&nbsp; Windows · Linux · macOS
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  <code>hook_utf8.py</code> v1.1.0 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+  <span data-lang-inline="en" class="visible">Built for PyInstaller applications with non-ASCII output</span>
+  <span data-lang-inline="pl">Stworzone dla aplikacji PyInstaller z wyjściem spoza ASCII</span>
+</footer>
+
+<script>
+  function setLang(lang) {
+    // blocks
+    document.querySelectorAll('[data-lang]').forEach(el => {
+      el.classList.toggle('visible', el.dataset.lang === lang);
+    });
+    // inline
+    document.querySelectorAll('[data-lang-inline]').forEach(el => {
+      el.classList.toggle('visible', el.dataset.langInline === lang);
+    });
+    // buttons
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-pl').classList.toggle('active', lang === 'pl');
+    document.documentElement.lang = lang;
+  }
+
+  // Default: EN
+  setLang('en');
+</script>
+</body>
+</html>
