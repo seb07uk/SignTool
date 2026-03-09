@@ -1,0 +1,31 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 1, 0, 0),
+    prodvers=(1, 1, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [
+          StringStruct('CompanyName', 'polsoft.ITS™ Group'),
+          StringStruct('FileDescription', 'Quick DigitalSignature GUI'),
+          StringStruct('FileVersion', '1.9'),
+          StringStruct('InternalName', 'Quick DigitalSignature GUI'),
+          StringStruct('LegalCopyright', '2026 polsoft.ITS™. All rights reserved.'),
+          StringStruct('OriginalFilename', 'Quick DigitalSignature GUI.exe'),
+          StringStruct('ProductName', 'Quick DigitalSignature GUI'),
+          StringStruct('ProductVersion', '1.9'),
+          StringStruct('Comments', 'Project Manager: Sebastian Januchowski; Contact: polsoft.its@fastservice.com; Website: https://github.com/seb07uk')
+        ]
+      )
+    ]),
+    VarFileInfo([VarStruct('Translation', [0x0409, 0x04B0])])
+  ]
+)
