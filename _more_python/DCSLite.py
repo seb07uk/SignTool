@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                         SignTool GUI - polsoft.ITS™                         ║
+║                         Digital Code Signature Lite - polsoft.ITS™                         ║
 ║                                                                              ║
 ║  Project Manager : Sebastian Januchowski                                     ║
 ║  Company         : polsoft.ITS™ Group                                        ║
@@ -221,7 +221,7 @@ def _get_logo_image(size=56):
 
 TRANSLATIONS = {
     "en": {
-        "app_subtitle":       "Digital Signature Manager",
+        "app_subtitle":       "polsoft.ITS™ Digital Signature Manager",
         "st_found":           "signtool detected: {name}",
         "st_missing":         "signtool.exe not found",
         "sec_file":           "File to Sign",
@@ -235,6 +235,8 @@ TRANSLATIONS = {
         "lbl_algorithm":      "Algorithm",
         "btn_sign":           "Sign File",
         "btn_signing":        "Signing…",
+        "btn_verify":         "Verify Signature",
+        "btn_verifying":      "Verifying…",
         "btn_cancel":         "Cancel",
         "btn_clear_history":  "Clear history",
         "btn_lang":           "🌐 PL",
@@ -254,6 +256,10 @@ TRANSLATIONS = {
         "sign_ok":            "File signed successfully.",
         "sign_fail":          "Signing failed (code: {code}).\n\n{detail}",
         "sign_not_found":     "Cannot launch signtool:\n{path}",
+        "verify_ok":          "Signature is valid.\n\n{detail}",
+        "verify_fail":        "Signature verification failed (code: {code}).\n\n{detail}",
+        "verify_not_found":   "Cannot launch signtool:\n{path}",
+        "verify_no_file":     "Please select a file to verify first.",
         "title_success":      "Success",
         "title_error":        "Error",
         "clear_title":        "Clear History",
@@ -264,7 +270,7 @@ TRANSLATIONS = {
         "quit_confirm":       "Close the application?",
     },
     "pl": {
-        "app_subtitle":       "Menedżer podpisów cyfrowych",
+        "app_subtitle":       "polsoft.ITS™ Menedżer podpisów cyfrowych",
         "st_found":           "signtool wykryty: {name}",
         "st_missing":         "signtool.exe nie znaleziony",
         "sec_file":           "Plik do podpisania",
@@ -278,6 +284,8 @@ TRANSLATIONS = {
         "lbl_algorithm":      "Algorytm",
         "btn_sign":           "Podpisz plik",
         "btn_signing":        "Podpisywanie…",
+        "btn_verify":         "Sprawdź podpis",
+        "btn_verifying":      "Weryfikacja…",
         "btn_cancel":         "Anuluj",
         "btn_clear_history":  "Wyczyść historię",
         "btn_lang":           "🌐 EN",
@@ -297,6 +305,10 @@ TRANSLATIONS = {
         "sign_ok":            "Plik został podpisany pomyślnie.",
         "sign_fail":          "Podpisywanie nie powiodło się (kod: {code}).\n\n{detail}",
         "sign_not_found":     "Nie można uruchomić signtool:\n{path}",
+        "verify_ok":          "Podpis jest prawidłowy.\n\n{detail}",
+        "verify_fail":        "Weryfikacja podpisu nie powiodła się (kod: {code}).\n\n{detail}",
+        "verify_not_found":   "Nie można uruchomić signtool:\n{path}",
+        "verify_no_file":     "Najpierw wybierz plik do weryfikacji.",
         "title_success":      "Sukces",
         "title_error":        "Błąd",
         "clear_title":        "Wyczyść historię",
@@ -310,45 +322,95 @@ TRANSLATIONS = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Paths / history
+#  Paths / history  (portable — no files written, registry only)
 # ─────────────────────────────────────────────────────────────────────────────
 
-APP_DIR      = os.path.dirname(os.path.abspath(sys.argv[0]))
-HISTORY_FILE = os.path.join(APP_DIR, "signtool_history.json")
-
-SDK_PATHS = [
-    os.path.join(APP_DIR, "signtool.exe"),
-    r"C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe",
-    r"C:\Program Files (x86)\Windows Kits\10\bin\x86\signtool.exe",
-    r"C:\Program Files\Windows Kits\10\bin\x64\signtool.exe",
-    "signtool.exe",
-]
+# Registry key for persistent history (no JSON files created)
+REG_KEY  = r"Software\polsoft.ITS\DCSLite"
+REG_VAL  = "History"
 
 MAX_HISTORY = 10
 
 
+def _meipass_dir():
+    """Return PyInstaller bundle dir, or None when running from source."""
+    return getattr(sys, "_MEIPASS", None)
+
+
+def _get_signtool_working_path():
+    """
+    When running from a PyInstaller bundle, signtool.exe sits inside
+    %TEMP%\\_MEIxxxxxx which Windows SRP / Defender may block from executing.
+    We copy it once to %LOCALAPPDATA%\\polsoft.ITS\\DCSLite\\ which is always
+    allowed. Returns the writable path, or None if not bundled.
+    """
+    mei = getattr(sys, "_MEIPASS", None)
+    if not mei:
+        return None
+    src = os.path.join(mei, "signtool.exe")
+    if not os.path.isfile(src):
+        return None
+    dst_dir = os.path.join(
+        os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+        "polsoft.ITS", "DCSLite"
+    )
+    os.makedirs(dst_dir, exist_ok=True)
+    dst = os.path.join(dst_dir, "signtool.exe")
+    try:
+        # copy only if missing or different size (avoid repeated writes)
+        if not os.path.isfile(dst) or os.path.getsize(dst) != os.path.getsize(src):
+            shutil.copy2(src, dst)
+        return dst
+    except Exception:
+        return src  # fall back to MEIPASS path
+
+
 def find_signtool():
-    for p in SDK_PATHS:
-        if p == "signtool.exe":
-            if shutil.which("signtool.exe"): return "signtool.exe"
-        elif os.path.isfile(p): return p
+    """Locate signtool.exe. Bundled copy has highest priority."""
+    # 1. Copied to LocalAppData (bypasses TEMP execution block)
+    local = _get_signtool_working_path()
+    if local and os.path.isfile(local):
+        return local
+    # 2. Windows SDK installations
+    for p in [
+        r"C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe",
+        r"C:\Program Files (x86)\Windows Kits\10\bin\x86\signtool.exe",
+        r"C:\Program Files\Windows Kits\10\bin\x64\signtool.exe",
+        r"C:\Program Files\Windows Kits\11\bin\x64\signtool.exe",
+    ]:
+        if os.path.isfile(p):
+            return p
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    cwd = os.getcwd()
+    for p in [os.path.join(app_dir, "signtool.exe"), os.path.join(cwd, "signtool.exe")]:
+        if os.path.isfile(p):
+            return p
+    # 4. PATH
+    if shutil.which("signtool.exe"):
+        return "signtool.exe"
     return ""
 
 
 def load_history():
+    """Load history from Windows registry — no file created."""
     try:
-        if os.path.isfile(HISTORY_FILE):
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except Exception: pass
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_KEY) as k:
+            raw, _ = winreg.QueryValueEx(k, REG_VAL)
+            return json.loads(raw)
+    except Exception:
+        pass
     return {"certs": [], "passwords": [], "files": []}
 
 
 def save_history(h):
+    """Persist history to Windows registry — no file created."""
     try:
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(h, f, ensure_ascii=False, indent=2)
-    except Exception: pass
+        import winreg
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, REG_KEY) as k:
+            winreg.SetValueEx(k, REG_VAL, 0, winreg.REG_SZ, json.dumps(h))
+    except Exception:
+        pass
 
 
 def push_history(lst, value):
@@ -396,6 +458,71 @@ C = {
     "ok":          "#22c55e",
     "warn":        "#f59e0b",
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Theme palette registry
+# ─────────────────────────────────────────────────────────────────────────────
+
+THEMES = {
+    "Slate Dark": {
+        "bg":         "#1a1d23", "surface":  "#22262e", "surface2": "#2a2f39",
+        "surface3":   "#313847", "border":   "#363c4a", "border_hi":"#3b82f6",
+        "border_md":  "#454e5e", "blue":     "#3b82f6", "blue_lt":  "#1e3a5f",
+        "blue_dk":    "#2563eb", "blue_xdk": "#1d4ed8", "green":    "#22c55e",
+        "green_lt":   "#14532d", "green_dk": "#16a34a", "green_xdk":"#15803d",
+        "red":        "#f87171", "red_lt":   "#450a0a", "red_dk":   "#ef4444",
+        "txt":        "#e2e8f0", "txt2":     "#94a3b8", "txt3":     "#64748b",
+        "txt4":       "#475569", "ok":       "#22c55e", "warn":     "#f59e0b",
+    },
+    "Midnight Blue": {
+        "bg":         "#0d1117", "surface":  "#161b22", "surface2": "#21262d",
+        "surface3":   "#2d333b", "border":   "#30363d", "border_hi":"#58a6ff",
+        "border_md":  "#3d444d", "blue":     "#58a6ff", "blue_lt":  "#0d2137",
+        "blue_dk":    "#1f6feb", "blue_xdk": "#1158c7", "green":    "#3fb950",
+        "green_lt":   "#0d3b1f", "green_dk": "#238636", "green_xdk":"#1a7f37",
+        "red":        "#ff7b72", "red_lt":   "#3d0f0f", "red_dk":   "#da3633",
+        "txt":        "#c9d1d9", "txt2":     "#8b949e", "txt3":     "#6e7681",
+        "txt4":       "#484f58", "ok":       "#3fb950", "warn":     "#d29922",
+    },
+    "Crimson Night": {
+        "bg":         "#1a1118", "surface":  "#231520", "surface2": "#2d1a2a",
+        "surface3":   "#382035", "border":   "#4a2a44", "border_hi":"#e05c8a",
+        "border_md":  "#5e3558", "blue":     "#e05c8a", "blue_lt":  "#4a1030",
+        "blue_dk":    "#c2185b", "blue_xdk": "#ad1457", "green":    "#4caf82",
+        "green_lt":   "#0d3326", "green_dk": "#2e7d58", "green_xdk":"#1b5e40",
+        "red":        "#ff6b8a", "red_lt":   "#4a0a1a", "red_dk":   "#e53935",
+        "txt":        "#f3e5ee", "txt2":     "#c9a0bc", "txt3":     "#9e6e8e",
+        "txt4":       "#6e4060", "ok":       "#4caf82", "warn":     "#ffb74d",
+    },
+    "Forest Green": {
+        "bg":         "#0f1a10", "surface":  "#152018", "surface2": "#1e2e20",
+        "surface3":   "#253828", "border":   "#2e4230", "border_hi":"#4caf50",
+        "border_md":  "#3a5240", "blue":     "#4caf50", "blue_lt":  "#0d2e10",
+        "blue_dk":    "#388e3c", "blue_xdk": "#2e7d32", "green":    "#81c784",
+        "green_lt":   "#0d3b1a", "green_dk": "#388e3c", "green_xdk":"#2e7d32",
+        "red":        "#ef9a9a", "red_lt":   "#3e1010", "red_dk":   "#e53935",
+        "txt":        "#e8f5e9", "txt2":     "#a5d6a7", "txt3":     "#66bb6a",
+        "txt4":       "#388e3c", "ok":       "#81c784", "warn":     "#ffcc02",
+    },
+    "Light Pro": {
+        "bg":         "#f0f2f5", "surface":  "#ffffff", "surface2": "#f5f7fa",
+        "surface3":   "#eaecf0", "border":   "#d0d7de", "border_hi":"#2563eb",
+        "border_md":  "#b0b8c8", "blue":     "#2563eb", "blue_lt":  "#dbeafe",
+        "blue_dk":    "#1d4ed8", "blue_xdk": "#1e40af", "green":    "#16a34a",
+        "green_lt":   "#dcfce7", "green_dk": "#15803d", "green_xdk":"#166534",
+        "red":        "#dc2626", "red_lt":   "#fee2e2", "red_dk":   "#b91c1c",
+        "txt":        "#111827", "txt2":     "#374151", "txt3":     "#6b7280",
+        "txt4":       "#9ca3af", "ok":       "#16a34a", "warn":     "#d97706",
+    },
+}
+
+_CURRENT_THEME = "Slate Dark"
+
+def apply_theme(name):
+    global C, _CURRENT_THEME
+    if name in THEMES:
+        C.update(THEMES[name])
+        _CURRENT_THEME = name
 
 F_DISPLAY = ("Segoe UI Semibold",  9)
 F_LABEL   = ("Segoe UI",           8)
@@ -599,7 +726,7 @@ class HistoryEntry(tk.Frame):
 class SignToolGUI(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("SignTool GUI — polsoft.ITS™")
+        self.title("Digital Code Signature Lite — polsoft.ITS™")
         self.resizable(True, False)
         self.configure(bg=C["bg"])
 
@@ -700,7 +827,7 @@ class SignToolGUI(tk.Tk):
         # title block
         titles = tk.Frame(left, bg=C["surface"])
         titles.pack(side="left")
-        tk.Label(titles, text="SignTool GUI",
+        tk.Label(titles, text="Digital Code Signature Lite",
                  font=F_TITLE, bg=C["surface"], fg=C["txt"]).pack(anchor="w")
         self._lbl_subtitle = tk.Label(
             titles, text=self._("app_subtitle"),
@@ -886,34 +1013,302 @@ class SignToolGUI(tk.Tk):
             font=F_BTN, padx=20, pady=5)
         self.btn_sign.pack(side="right")
 
+        self.btn_verify = FlatButton(
+            right_btns, text=self._("btn_verify"),
+            command=self._on_verify,
+            bg_normal=C["green_lt"],
+            bg_hover=C["green_dk"],
+            bg_press=C["green_xdk"],
+            fg=C["green"],
+            font=F_BTN, padx=16, pady=5)
+        self.btn_verify.pack(side="right", padx=(0, 6))
+
     # ── footer ────────────────────────────────────────────────────────────────
 
     def _build_footer(self):
-        ft = tk.Frame(self, bg=C["surface3"],
+        ft = tk.Frame(self, bg=C["surface"],
                       highlightbackground=C["border"],
                       highlightthickness=1)
         ft.grid(row=2, column=0, sticky="ew")
-        ft.columnconfigure(1, weight=1)
+        ft.columnconfigure(3, weight=1)
 
+        # broom icon button (clear history)
         self._btn_clear = tk.Button(
-            ft, text=self._("btn_clear_history"),
+            ft, text="🧹",
             command=self._clear_history,
-            bg=C["surface3"], fg=C["txt4"],
+            bg=C["surface"], fg=C["txt3"],
             activebackground=C["red_lt"],
             activeforeground=C["red"],
             relief="flat", bd=0,
-            font=F_MICRO, padx=8, pady=0,
+            font=("Segoe UI Emoji", 11), padx=6, pady=2,
             cursor="hand2", highlightthickness=0)
         self._btn_clear.grid(row=0, column=0, sticky="w",
-                             padx=(8, 0), pady=5)
+                             padx=(6, 2), pady=4)
+        self._btn_clear.bind("<Enter>", lambda e: self._btn_clear.configure(fg=C["red"]))
+        self._btn_clear.bind("<Leave>", lambda e: self._btn_clear.configure(fg=C["txt3"]))
+
+        # themes icon button
+        self._btn_themes = tk.Button(
+            ft, text="🎨",
+            command=self._show_themes,
+            bg=C["surface"], fg=C["txt3"],
+            activebackground=C["surface2"],
+            activeforeground=C["blue"],
+            relief="flat", bd=0,
+            font=("Segoe UI Emoji", 11), padx=6, pady=2,
+            cursor="hand2", highlightthickness=0)
+        self._btn_themes.grid(row=0, column=1, sticky="w",
+                              padx=(0, 2), pady=4)
+        self._btn_themes.bind("<Enter>", lambda e: self._btn_themes.configure(fg=C["blue"]))
+        self._btn_themes.bind("<Leave>", lambda e: self._btn_themes.configure(fg=C["txt3"]))
+
+        # about icon button
+        self._btn_about = tk.Button(
+            ft, text="ℹ",
+            command=self._show_about,
+            bg=C["surface"], fg=C["txt3"],
+            activebackground=C["blue_lt"],
+            activeforeground=C["blue"],
+            relief="flat", bd=0,
+            font=("Segoe UI", 12, "bold"), padx=6, pady=2,
+            cursor="hand2", highlightthickness=0)
+        self._btn_about.grid(row=0, column=2, sticky="w",
+                              padx=(0, 0), pady=4)
+        self._btn_about.bind("<Enter>", lambda e: self._btn_about.configure(fg=C["blue"]))
+        self._btn_about.bind("<Leave>", lambda e: self._btn_about.configure(fg=C["txt3"]))
 
         tk.Label(ft,
-                 text=f"{__copyright__}  •  {__email__}  •  {__github__}",
-                 font=F_MICRO, bg=C["surface3"],
-                 fg=C["txt4"]).grid(
-            row=0, column=1, sticky="e", padx=(0, 10), pady=5)
+                 text=f"{__copyright__}  •  {__email__}",
+                 font=F_MICRO, bg=C["surface"],
+                 fg=C["txt2"]).grid(
+            row=0, column=3, sticky="e", padx=(0, 10), pady=4)
 
-    # ── widget helpers ────────────────────────────────────────────────────────
+    def _show_about(self):
+        win = tk.Toplevel(self)
+        win.title("About Digital Code Signature Lite")
+        win.resizable(False, False)
+        win.configure(bg=C["bg"])
+        win.grab_set()
+
+        # center over parent
+        self.update_idletasks()
+        px, py = self.winfo_rootx(), self.winfo_rooty()
+        pw, ph = self.winfo_width(), self.winfo_height()
+        win.update_idletasks()
+        ww, wh = 420, 380
+        win.geometry(f"{ww}x{wh}+{px+(pw-ww)//2}+{py+(ph-wh)//2}")
+
+        # top blue stripe
+        tk.Frame(win, bg=C["blue"], height=3).pack(fill="x")
+
+        # centered logo + title block
+        top = tk.Frame(win, bg=C["surface"], pady=18)
+        top.pack(fill="x")
+        img = _get_logo_image(56)
+        if img:
+            lbl_img = tk.Label(top, image=img, bg=C["surface"])
+            lbl_img.image = img
+            lbl_img.pack(anchor="center")
+        tk.Label(top, text="Digital Code Signature Lite",
+                 font=("Segoe UI", 18, "bold"),
+                 bg=C["surface"], fg=C["txt"]).pack(anchor="center", pady=(8, 2))
+        tk.Label(top, text=f"Version {__version__}",
+                 font=("Segoe UI", 9),
+                 bg=C["surface"], fg=C["txt3"]).pack(anchor="center")
+
+        tk.Frame(win, bg=C["border"], height=1).pack(fill="x")
+
+        # info area
+        body = tk.Frame(win, bg=C["bg"], padx=20, pady=14)
+        body.pack(fill="both", expand=True)
+
+        # polsoft.ITS section
+        sec1 = tk.Frame(body, bg=C["surface2"],
+                        highlightbackground=C["border"], highlightthickness=1)
+        sec1.pack(fill="x", pady=(0, 10))
+        tk.Label(sec1, text="  Application Author",
+                 font=("Segoe UI Semibold", 8),
+                 bg=C["surface2"], fg=C["blue"],
+                 anchor="w").pack(fill="x", padx=8, pady=(8, 2))
+        tk.Label(sec1, text=f"  {__author__}  ·  {__company__}",
+                 font=("Segoe UI", 9),
+                 bg=C["surface2"], fg=C["txt"],
+                 anchor="w").pack(fill="x", padx=8)
+        tk.Label(sec1, text=f"  {__email__}",
+                 font=("Consolas", 8),
+                 bg=C["surface2"], fg=C["txt3"],
+                 anchor="w").pack(fill="x", padx=8)
+        tk.Label(sec1, text=f"  {__github__}",
+                 font=("Consolas", 8),
+                 bg=C["surface2"], fg=C["txt3"],
+                 anchor="w").pack(fill="x", padx=8, pady=(0, 8))
+
+        # Microsoft section
+        sec2 = tk.Frame(body, bg=C["surface2"],
+                        highlightbackground=C["border"], highlightthickness=1)
+        sec2.pack(fill="x")
+        tk.Label(sec2, text="  signtool.exe Provider",
+                 font=("Segoe UI Semibold", 8),
+                 bg=C["surface2"], fg=C["blue"],
+                 anchor="w").pack(fill="x", padx=8, pady=(8, 2))
+        tk.Label(sec2, text="  Microsoft Corporation  ·  Windows SDK (10/11)",
+                 font=("Segoe UI", 9),
+                 bg=C["surface2"], fg=C["txt"],
+                 anchor="w").pack(fill="x", padx=8)
+        tk.Label(sec2, text="  https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/",
+                 font=("Consolas", 7),
+                 bg=C["surface2"], fg=C["txt3"],
+                 anchor="w").pack(fill="x", padx=8, pady=(0, 8))
+
+        tk.Frame(win, bg=C["border"], height=1).pack(fill="x")
+
+        # close button
+        tk.Button(win, text="Close",
+                  command=win.destroy,
+                  bg=C["blue"], fg="#ffffff",
+                  activebackground=C["blue_dk"],
+                  activeforeground="#ffffff",
+                  relief="flat", bd=0,
+                  font=("Segoe UI Semibold", 9),
+                  padx=22, pady=6,
+                  cursor="hand2", highlightthickness=0).pack(
+            anchor="e", padx=18, pady=10)
+
+    def _show_themes(self):
+        win = tk.Toplevel(self)
+        win.title("Themes")
+        win.resizable(False, False)
+        win.configure(bg=C["bg"])
+        win.grab_set()
+
+        self.update_idletasks()
+        px, py = self.winfo_rootx(), self.winfo_rooty()
+        pw, ph = self.winfo_width(), self.winfo_height()
+        win.update_idletasks()
+        ww, wh = 340, 310
+        win.geometry(f"{ww}x{wh}+{px+(pw-ww)//2}+{py+(ph-wh)//2}")
+
+        tk.Frame(win, bg=C["blue"], height=3).pack(fill="x")
+
+        hdr = tk.Frame(win, bg=C["surface"], pady=10)
+        hdr.pack(fill="x")
+        tk.Label(hdr, text="🎨  Choose Theme",
+                 font=("Segoe UI Semibold", 11),
+                 bg=C["surface"], fg=C["txt"]).pack(anchor="center")
+
+        tk.Frame(win, bg=C["border"], height=1).pack(fill="x")
+
+        body = tk.Frame(win, bg=C["bg"], padx=16, pady=12)
+        body.pack(fill="both", expand=True)
+
+        # color swatch previews for each theme
+        SWATCHES = {
+            "Slate Dark":    ["#1a1d23", "#3b82f6", "#22c55e", "#f87171"],
+            "Midnight Blue": ["#0d1117", "#58a6ff", "#3fb950", "#ff7b72"],
+            "Crimson Night": ["#1a1118", "#e05c8a", "#4caf82", "#ff6b8a"],
+            "Forest Green":  ["#0f1a10", "#4caf50", "#81c784", "#ef9a9a"],
+            "Light Pro":     ["#f0f2f5", "#2563eb", "#16a34a", "#dc2626"],
+        }
+
+        for theme_name, swatches in SWATCHES.items():
+            row = tk.Frame(body, bg=C["surface2"],
+                           highlightbackground=C["border_hi"] if theme_name == _CURRENT_THEME else C["border"],
+                           highlightthickness=1)
+            row.pack(fill="x", pady=3)
+            row.columnconfigure(1, weight=1)
+
+            # swatches
+            sw_frame = tk.Frame(row, bg=C["surface2"])
+            sw_frame.grid(row=0, column=0, padx=(8, 6), pady=7)
+            for color in swatches:
+                tk.Frame(sw_frame, bg=color, width=12, height=12,
+                         highlightbackground="#222222",
+                         highlightthickness=1).pack(side="left", padx=1)
+
+            tk.Label(row, text=theme_name,
+                     font=("Segoe UI Semibold", 9),
+                     bg=C["surface2"],
+                     fg=C["blue"] if theme_name == _CURRENT_THEME else C["txt"]).grid(
+                row=0, column=1, sticky="w")
+
+            active_lbl = tk.Label(row, text="✓ active" if theme_name == _CURRENT_THEME else "",
+                                  font=("Segoe UI", 7),
+                                  bg=C["surface2"], fg=C["green"])
+            active_lbl.grid(row=0, column=2, padx=(0, 8))
+
+            def _apply(tn=theme_name):
+                apply_theme(tn)
+                self._rebuild_ui()
+                win.destroy()
+
+            row.bind("<Button-1>", lambda e, fn=_apply: fn())
+            for child in row.winfo_children():
+                child.bind("<Button-1>", lambda e, fn=_apply: fn())
+            row.bind("<Enter>", lambda e, r=row: r.configure(highlightbackground=C["border_hi"]))
+            row.bind("<Leave>", lambda e, r=row, tn=theme_name: r.configure(
+                highlightbackground=C["border_hi"] if tn == _CURRENT_THEME else C["border"]))
+
+        tk.Frame(win, bg=C["border"], height=1).pack(fill="x")
+        tk.Button(win, text="Cancel", command=win.destroy,
+                  bg=C["surface"], fg=C["txt2"],
+                  activebackground=C["surface2"], activeforeground=C["txt"],
+                  relief="flat", bd=0, font=("Segoe UI Semibold", 9),
+                  padx=18, pady=5, cursor="hand2", highlightthickness=0).pack(
+            anchor="e", padx=16, pady=8)
+
+    def _rebuild_ui(self):
+        """Destroy and rebuild all widgets with updated C palette."""
+        for widget in self.winfo_children():
+            widget.destroy()
+        self._theme()
+        self._build()
+
+    # ── verify ────────────────────────────────────────────────────────────────
+
+    def _on_verify(self):
+        ft = self.he_file.get().strip()
+        if not ft:
+            messagebox.showwarning(self._("title_error"), self._("verify_no_file"))
+            return
+        if not self._signtool:
+            messagebox.showerror(self._("title_error"), self._("err_no_signtool"))
+            return
+        self.btn_verify.configure(state="disabled", text=self._("btn_verifying"))
+        threading.Thread(target=self._run_verify, daemon=True).start()
+
+    def _run_verify(self):
+        ft = self.he_file.get().strip()
+        cmd = [self._signtool, "verify", "/pa", "/v", ft]
+
+        def done(ok, msg):
+            self.btn_verify.configure(state="normal", text=self._("btn_verify"))
+            (messagebox.showinfo if ok else messagebox.showerror)(
+                self._("title_success" if ok else "title_error"), msg)
+
+        try:
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = 0  # SW_HIDE
+            r = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                startupinfo=si,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            detail = (r.stdout + "\n" + r.stderr).strip()[:500]
+            if r.returncode == 0:
+                self.after(0, lambda: done(True, self._("verify_ok", detail=detail)))
+            else:
+                self.after(0, lambda: done(
+                    False, self._("verify_fail", code=r.returncode, detail=detail)))
+        except FileNotFoundError:
+            self.after(0, lambda: done(
+                False, self._("verify_not_found", path=self._signtool)))
+        except Exception as exc:
+            self.after(0, lambda: done(False, str(exc)))
 
     def _sec(self, parent, label, row):
         f = tk.Frame(parent, bg=C["surface"])
@@ -969,8 +1364,8 @@ class SignToolGUI(tk.Tk):
         self._chk_ts.configure(text=self._("lbl_timestamp"))
         self._lbl_alg.configure(text=self._("lbl_algorithm"))
         self.btn_sign.configure(text=self._("btn_sign"))
+        self.btn_verify.configure(text=self._("btn_verify"))
         self.btn_cancel.configure(text=self._("btn_cancel"))
-        self._btn_clear.configure(text=self._("btn_clear_history"))
 
     # ── events ────────────────────────────────────────────────────────────────
 
@@ -1056,8 +1451,18 @@ class SignToolGUI(tk.Tk):
                 self._("title_success" if ok else "title_error"), msg)
 
         try:
-            r = subprocess.run(cmd, capture_output=True,
-                               text=True, encoding="utf-8", errors="replace")
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = 0  # SW_HIDE
+            r = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                startupinfo=si,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
             if r.returncode == 0:
                 self.after(0, lambda: done(True, self._("sign_ok")))
             else:

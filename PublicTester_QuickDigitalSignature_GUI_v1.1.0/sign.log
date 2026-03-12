@@ -1,0 +1,106 @@
+2026-03-11 04:05:40  DEBUG     Importing AvifImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing BlpImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing BmpImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing BufrStubImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing CurImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing DcxImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing DdsImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing EpsImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing FitsImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing FliImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing FpxImagePlugin
+2026-03-11 04:05:40  DEBUG     Image: failed to import FpxImagePlugin: No module named 'olefile'
+2026-03-11 04:05:40  DEBUG     Importing FtexImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing GbrImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing GifImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing GribStubImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing Hdf5StubImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing IcnsImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing IcoImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing ImImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing ImtImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing IptcImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing JpegImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing Jpeg2KImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing McIdasImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing MicImagePlugin
+2026-03-11 04:05:40  DEBUG     Image: failed to import MicImagePlugin: No module named 'olefile'
+2026-03-11 04:05:40  DEBUG     Importing MpegImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing MpoImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing MspImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PalmImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PcdImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PcxImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PdfImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PixarImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PngImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PpmImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing PsdImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing QoiImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing SgiImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing SpiderImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing SunImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing TgaImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing TiffImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing WebPImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing WmfImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing XbmImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing XpmImagePlugin
+2026-03-11 04:05:40  DEBUG     Importing XVThumbImagePlugin
+2026-03-11 04:05:40  DEBUG     STREAM b'IHDR' 39083 13
+2026-03-11 04:05:40  DEBUG     STREAM b'gAMA' 39108 4
+2026-03-11 04:05:40  DEBUG     STREAM b'pHYs' 39124 9
+2026-03-11 04:05:40  DEBUG     STREAM b'IDAT' 39145 49582
+2026-03-11 04:05:43  DEBUG     Importing AvifImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing BlpImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing BmpImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing BufrStubImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing CurImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing DcxImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing DdsImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing EpsImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing FitsImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing FliImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing FpxImagePlugin
+2026-03-11 04:05:43  DEBUG     Image: failed to import FpxImagePlugin: No module named 'olefile'
+2026-03-11 04:05:43  DEBUG     Importing FtexImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing GbrImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing GifImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing GribStubImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing Hdf5StubImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing IcnsImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing IcoImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing ImImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing ImtImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing IptcImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing JpegImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing Jpeg2KImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing McIdasImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing MicImagePlugin
+2026-03-11 04:05:43  DEBUG     Image: failed to import MicImagePlugin: No module named 'olefile'
+2026-03-11 04:05:43  DEBUG     Importing MpegImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing MpoImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing MspImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PalmImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PcdImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PcxImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PdfImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PixarImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PngImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PpmImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing PsdImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing QoiImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing SgiImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing SpiderImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing SunImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing TgaImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing TiffImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing WebPImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing WmfImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing XbmImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing XpmImagePlugin
+2026-03-11 04:05:43  DEBUG     Importing XVThumbImagePlugin
+2026-03-11 04:05:43  DEBUG     STREAM b'IHDR' 39083 13
+2026-03-11 04:05:43  DEBUG     STREAM b'gAMA' 39108 4
+2026-03-11 04:05:43  DEBUG     STREAM b'pHYs' 39124 9
+2026-03-11 04:05:43  DEBUG     STREAM b'IDAT' 39145 49582
