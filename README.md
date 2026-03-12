@@ -1,6 +1,3 @@
-<div align="center">
-
-<img src="readme_assets/icon_polsoft.png" width="64" alt="polsoft.ITS Logo"/>
 
 # 🔏 SignTool Suite — Code Signing Tools
 
@@ -18,17 +15,14 @@ A set of three Windows desktop applications that turn complex command-line opera
 
 ## 1. PublicTester QuickDigital Signature GUI `v1.1.0`
 
-<img src="readme_assets/icon_publictester.png" width="36" align="left" style="margin-right:12px"/>
+![Screenshot](https://github.com/user-attachments/assets/1d73cdda-0226-41c8-ac53-9bb40f27ed90)
+
 
 **Lightweight tool for quick digital signature verification**
 
 <br clear="left"/>
 
 Designed for testers and developers who want to sign a file in seconds and verify that the entire chain works correctly — with zero configuration. The application automatically detects `signtool.exe` (Windows SDK) and `.pfx` certificates in nearby folders.
-
-<div align="center">
-<img src="readme_assets/PublicTester_QuickDigitalSignature_GUI_v1_1.png" width="420" alt="PublicTester GUI Screenshot"/>
-</div>
 
 ### ✅ Key Features
 
@@ -46,17 +40,13 @@ Designed for testers and developers who want to sign a file in seconds and verif
 
 ## 2. Quick DigitalSignature GUI `v1.9`
 
-<img src="readme_assets/icon_quickds.png" width="36" align="left" style="margin-right:12px"/>
+<img width="439" height="393" alt="Screenshot" src="https://github.com/user-attachments/assets/2b2d158d-22bc-4684-a94b-281e43636d86" />
+
 
 **Complete tool for everyday file signing**
 
-<br clear="left"/>
 
 An expanded tool with a full set of operations: signing, verification with Policy Authority and timestamp server, and CA certificate installation. Supports light and dark mode, password saving via DPAPI, and files can be dragged directly into the window.
-
-<div align="center">
-<img src="readme_assets/Quick_DigitalSignature_v1_9_GUI.png" width="440" alt="Quick DigitalSignature GUI Screenshot"/>
-</div>
 
 ### ✅ Key Features
 
@@ -75,7 +65,8 @@ An expanded tool with a full set of operations: signing, verification with Polic
 
 ## 3. SignTool's-ITS GUI `v2.0`
 
-<img src="readme_assets/icon_signtools.png" width="36" align="left" style="margin-right:12px"/>
+<img width="722" height="839" alt="Screenshot" src="https://github.com/user-attachments/assets/4f0ea80e-531f-42cd-849a-a23f7958cc9d" />
+
 
 **Professional production environment — Microsoft signtool + OpenSSL**
 
@@ -83,9 +74,6 @@ An expanded tool with a full set of operations: signing, verification with Polic
 
 The most advanced tool in the suite. It combines `signtool.exe` (Microsoft) with `openssl` in a single, multi-tab interface with full Polish and English language support. It enables not only signing and verification, but also generating your own certificates and batch processing.
 
-<div align="center">
-<img src="readme_assets/SignTools-ITS_v2.png" width="600" alt="SignTools-ITS GUI v2.0 Screenshot"/>
-</div>
 
 ### ✅ Key Features
 
