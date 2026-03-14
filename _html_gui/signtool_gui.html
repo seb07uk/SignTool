@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignTool GUI</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12; --surface: #141820; --surface2: #1c2230;
+    --border: #2a3245; --accent: #00d4ff; --accent2: #ff6b35;
+    --text: #c8d8e8; --text-muted: #5a6a80; --success: #00e676; --error: #ff4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Rajdhani', sans-serif; font-size: 15px;
+    min-height: 100vh; padding: 24px;
+    background-image:
+      radial-gradient(ellipse at 0% 0%, rgba(0,212,255,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, rgba(255,107,53,0.04) 0%, transparent 50%);
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), #0080a0);
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 22px;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: 2px; color: #fff; text-transform: uppercase; }
+  h1 span { color: var(--accent); }
+  .subtitle { font-size: 13px; color: var(--text-muted); letter-spacing: 1px; margin-top: 2px; }
+
+  /* Lang switcher */
+  .lang-switcher {
+    display: flex; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .lang-btn {
+    padding: 8px 18px; font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; border: none; background: transparent; color: var(--text-muted);
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .lang-btn.active { background: var(--accent); color: #000; }
+  .lang-btn:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+  .tabs {
+    display: flex; gap: 2px; margin-bottom: 24px;
+    background: var(--surface); padding: 4px;
+    border-radius: 8px; border: 1px solid var(--border); width: fit-content;
+  }
+  .tab {
+    padding: 8px 20px; border-radius: 6px; cursor: pointer;
+    font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted); border: none; background: transparent; transition: all 0.2s;
+  }
+  .tab.active { background: var(--accent); color: #000; }
+  .tab:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .panel-title {
+    font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+  label .req { color: var(--accent2); margin-left: 3px; }
+
+  input[type="text"], select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; padding: 9px 12px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,212,255,0.15); }
+  select option { background: var(--surface2); }
+
+  .btn-browse {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-muted); font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; font-weight: 600; padding: 9px 14px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-browse:hover { border-color: var(--accent); color: var(--accent); }
+
+  .input-group { display: flex; gap: 6px; }
+  .input-group input { flex: 1; }
+
+  .checkbox-field { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
+  .checkbox-field input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .checkbox-field span { font-size: 14px; font-weight: 500; color: var(--text); cursor: pointer; }
+
+  .cmd-panel { grid-column: 1 / -1; background: #080b0f; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .cmd-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .cmd-header-left { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+  .cmd-dots { display: flex; gap: 6px; }
+  .cmd-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .cmd-dots span:nth-child(1) { background: #ff5f57; }
+  .cmd-dots span:nth-child(2) { background: #febc2e; }
+  .cmd-dots span:nth-child(3) { background: #28c840; }
+  .cmd-body { padding: 16px; min-height: 80px; }
+  .cmd-output { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #00e676; word-break: break-all; white-space: pre-wrap; line-height: 1.6; min-height: 40px; }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 14px 16px; background: var(--surface); border-top: 1px solid var(--border); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 6px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #00b8d9; box-shadow: 0 0 20px rgba(0,212,255,0.4); }
+  .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
+  .btn-danger:hover { background: rgba(255,68,68,0.1); }
+
+  .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 1px; opacity: 0; transform: translateY(-10px); transition: all 0.3s; z-index: 1000; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--success); color: #000; }
+  .toast.info { background: var(--accent); color: #000; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">🔏</div>
+    <div>
+      <h1>Sign<span>Tool</span> GUI</h1>
+      <div class="subtitle" id="subtitle"></div>
+    </div>
+  </div>
+  <div class="lang-switcher">
+    <button class="lang-btn active" onclick="setLang('pl',this)">🇵🇱 PL</button>
+    <button class="lang-btn" onclick="setLang('en',this)">🇬🇧 EN</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab-btn-sign" onclick="switchTab('sign',this)"></button>
+  <button class="tab" id="tab-btn-verify" onclick="switchTab('verify',this)"></button>
+  <button class="tab" id="tab-btn-timestamp" onclick="switchTab('timestamp',this)"></button>
+</div>
+
+<!-- SIGN -->
+<div id="tab-sign" class="tab-content active">
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-title" id="pt-file-cert"></div>
+
+      <div class="field">
+        <label><span id="lbl-file-sign"></span> <span class="req">*</span></label>
+        <div class="input-group">
+          <input type="text" id="s-file" oninput="buildCmd()">
+          <button class="btn-browse" id="btn-browse-sfile" onclick="pickFile('s-file','exe')"></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label><span id="lbl-cert"></span> <span class="req">*</span></label>
+        <div class="input-group">
+          <input type="text" id="s-cert" oninput="buildCmd()">
+          <button class="btn-browse" id="btn-browse-cert" onclick="pickFile('s-cert','pfx')"></button>
+        </div>
+        <div class="hint" id="hint-cert"></div>
+      </div>
+
+      <div class="field">
+        <label id="lbl-pass"></label>
+        <input type="text" id="s-pass" oninput="buildCmd()">
+      </div>
+
+      <hr class="divider">
+
+      <div class="panel-title" id="pt-signtool-path"></div>
+      <div class="field">
+        <div class="input-group">
+          <input type="text" id="s-signtool" value="signtool.exe" oninput="buildCmd()">
+          <button class="btn-browse" onclick="pickFile('s-signtool','exe')">📂</button>
+        </div>
+        <div class="hint" id="hint-signtool-path"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title" id="pt-sig-info"></div>
+
+      <div class="field">
+        <label id="lbl-desc"></label>
+        <input type="text" id="s-desc" oninput="buildCmd()">
+        <div class="hint" id="hint-desc"></div>
+      </div>
+
+      <div class="field">
+        <label id="lbl-url"></label>
+        <input type="text" id="s-url" placeholder="https://your-company.com" oninput="buildCmd()">
+      </div>
+
+      <div class="field">
+        <label id="lbl-algo"></label>
+        <select id="s-algo" onchange="buildCmd()">
+          <option value="sha256" id="opt-sha256" selected></option>
+          <option value="sha384">SHA-384</option>
+          <option value="sha512">SHA-512</option>
+          <option value="sha1" id="opt-sha1"></option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label id="lbl-tsa"></label>
+        <select id="s-tsa" onchange="updateTsaInput()">
+          <option value="http://timestamp.digicert.com">DigiCert</option>
+          <option value="http://timestamp.sectigo.com">Sectigo / Comodo</option>
+          <option value="http://tsa.starfieldtech.com">Starfield</option>
+          <option value="http://timestamp.globalsign.com/scripts/timstamp.dll">GlobalSign</option>
+          <option value="custom" id="opt-tsa-custom"></option>
+        </select>
+        <input type="text" id="s-tsa-custom" placeholder="http://your-tsa-server" style="margin-top:6px;display:none;" oninput="buildCmd()">
+      </div>
+
+      <div class="checkbox-field">
+        <input type="checkbox" id="s-dual" onchange="buildCmd()">
+        <span id="chk-dual"></span>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="s-rfcs" onchange="buildCmd()" checked>
+        <span id="chk-rfcs"></span>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="s-verbose" onchange="buildCmd()">
+        <span id="chk-verbose"></span>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" id="s-debug" onchange="buildCmd()">
+        <span id="chk-debug"></span>
+      </div>
+    </div>
+
+    <div class="cmd-panel">
+      <div class="cmd-header">
+        <div class="cmd-dots"><span></span><span></span><span></span></div>
+        <div class="cmd-header-left" id="cmd-title-sign"></div>
+        <div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono';">CMD / PowerShell</div>
+      </div>
+      <div class="cmd-body"><div id="cmdOutput" class="cmd-output"></div></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-copy-sign" onclick="copyCmd()"></button>
+        <button class="btn btn-secondary" id="btn-bat" onclick="exportBat()"></button>
+        <button class="btn btn-secondary" id="btn-ps1" onclick="exportPs1()"></button>
+        <button class="btn btn-danger" id="btn-clear" onclick="clearAll()"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VERIFY -->
+<div id="tab-verify" class="tab-content">
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-title" id="pt-verify"></div>
+      <div class="field">
+        <label><span id="lbl-file-verify"></span> <span class="req">*</span></label>
+        <div class="input-group">
+          <input type="text" id="v-file" oninput="buildCmdVerify()">
+          <button class="btn-browse" id="btn-browse-vfile" onclick="pickFile('v-file','exe')"></button>
+        </div>
+      </div>
+      <div class="checkbox-field"><input type="checkbox" id="v-all" onchange="buildCmdVerify()"><span id="chk-v-all"></span></div>
+      <div class="checkbox-field"><input type="checkbox" id="v-pa" onchange="buildCmdVerify()" checked><span id="chk-v-pa"></span></div>
+      <div class="checkbox-field"><input type="checkbox" id="v-verbose" onchange="buildCmdVerify()"><span id="chk-v-verbose"></span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" id="pt-tool-path-v"></div>
+      <div class="field">
+        <div class="input-group">
+          <input type="text" id="v-signtool" value="signtool.exe" oninput="buildCmdVerify()">
+          <button class="btn-browse" onclick="pickFile('v-signtool','exe')">📂</button>
+        </div>
+      </div>
+    </div>
+    <div class="cmd-panel">
+      <div class="cmd-header">
+        <div class="cmd-dots"><span></span><span></span><span></span></div>
+        <div class="cmd-header-left" id="cmd-title-verify"></div>
+      </div>
+      <div class="cmd-body"><div id="cmdOutputVerify" class="cmd-output"></div></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-copy-verify" onclick="copyCmdById('cmdOutputVerify')"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TIMESTAMP -->
+<div id="tab-timestamp" class="tab-content">
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-title" id="pt-ts"></div>
+      <div class="field">
+        <label><span id="lbl-file-ts"></span> <span class="req">*</span></label>
+        <div class="input-group">
+          <input type="text" id="t-file" oninput="buildCmdTs()">
+          <button class="btn-browse" id="btn-browse-tfile" onclick="pickFile('t-file','exe')"></button>
+        </div>
+      </div>
+      <div class="field">
+        <label id="lbl-ts-server"></label>
+        <input type="text" id="t-tsa" value="http://timestamp.digicert.com" oninput="buildCmdTs()">
+      </div>
+      <div class="field">
+        <label id="lbl-ts-algo"></label>
+        <select id="t-algo" onchange="buildCmdTs()">
+          <option value="sha256">SHA-256</option>
+          <option value="sha1">SHA-1</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="lbl-ts-signtool"></label>
+        <div class="input-group">
+          <input type="text" id="t-signtool" value="signtool.exe" oninput="buildCmdTs()">
+          <button class="btn-browse" onclick="pickFile('t-signtool','exe')">📂</button>
+        </div>
+      </div>
+    </div>
+    <div class="cmd-panel">
+      <div class="cmd-header">
+        <div class="cmd-dots"><span></span><span></span><span></span></div>
+        <div class="cmd-header-left" id="cmd-title-ts"></div>
+      </div>
+      <div class="cmd-body"><div id="cmdOutputTs" class="cmd-output"></div></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-copy-ts" onclick="copyCmdById('cmdOutputTs')"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ─── Translations ───────────────────────────────────────────────────────────
+const STRINGS = {
+  pl: {
+    subtitle: 'Interfejs graficzny dla signtool.exe · Windows Code Signing',
+    tab_sign: 'Podpisz plik',
+    tab_verify: 'Weryfikacja',
+    tab_timestamp: 'Timestamp',
+    pt_file_cert: 'Plik i Certyfikat',
+    lbl_file_sign: 'Plik do podpisania',
+    lbl_cert: 'Certyfikat (.pfx)',
+    hint_cert: 'lub użyj magazynu certyfikatów Windows',
+    lbl_pass: 'Hasło do pliku PFX',
+    pass_placeholder: 'hasło (pozostaw puste jeśli brak)',
+    pt_signtool_path: 'Ścieżka do signtool.exe',
+    hint_signtool_path: 'np. "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\x64\\signtool.exe"',
+    pt_sig_info: 'Informacje o Podpisie',
+    lbl_desc: 'Opis programu (nazwa firmy/produktu)',
+    desc_placeholder: 'np. polsoft.ITS™',
+    hint_desc: 'Wyświetlana w oknie UAC i szczegółach podpisu',
+    lbl_url: 'URL opisu (strona producenta)',
+    lbl_algo: 'Algorytm skrótu',
+    opt_sha256: 'SHA-256 (zalecany)',
+    opt_sha1: 'SHA-1 (przestarzały)',
+    lbl_tsa: 'Serwer znacznika czasu (TSA)',
+    opt_tsa_custom: 'Niestandardowy...',
+    chk_dual: 'Podwójne podpisanie (SHA-1 + SHA-256) — kompatybilność z Windows 7',
+    chk_rfcs: 'Użyj RFC 3161 dla znacznika czasu (/tr zamiast /t)',
+    chk_verbose: 'Tryb szczegółowy (/v)',
+    chk_debug: 'Tryb debugowania (/debug)',
+    cmd_title_sign: '⌨ Wygenerowana komenda',
+    btn_copy_sign: '📋 Kopiuj komendę',
+    btn_bat: '💾 Zapisz jako .bat',
+    btn_ps1: '🔷 Zapisz jako .ps1',
+    btn_clear: '🗑 Wyczyść',
+    pt_verify: 'Weryfikacja Podpisu',
+    lbl_file_verify: 'Plik do weryfikacji',
+    chk_v_all: 'Sprawdź wszystkie podpisy (/all)',
+    chk_v_pa: 'Zastosuj politykę Authenticode (/pa)',
+    chk_v_verbose: 'Tryb szczegółowy (/v)',
+    pt_tool_path_v: 'Ścieżka narzędzia',
+    cmd_title_verify: '⌨ Komenda weryfikacji',
+    btn_copy_verify: '📋 Kopiuj',
+    pt_ts: 'Dodaj Znacznik Czasu',
+    lbl_file_ts: 'Plik',
+    lbl_ts_server: 'Serwer TSA',
+    lbl_ts_algo: 'Algorytm',
+    lbl_ts_signtool: 'Ścieżka do signtool.exe',
+    cmd_title_ts: '⌨ Komenda znacznika czasu',
+    btn_copy_ts: '📋 Kopiuj',
+    browse: '📂 Przeglądaj',
+    cmd_placeholder: '← Wypełnij pola powyżej, komenda pojawi się tutaj',
+    cmd_placeholder_short: '← Wypełnij pola powyżej',
+    file_placeholder: 'TWÓJ_PLIK.exe',
+    pick_prompt: (ext) => `Wpisz ścieżkę do pliku .${ext}:`,
+    dual_step1: ':: === Krok 1: Podpisanie SHA-1 ===',
+    dual_step2: ':: === Krok 2: Dodanie podpisu SHA-256 (dual sign) ===',
+    bat_header: 'Podpisywanie pliku...',
+    bat_success: 'SUKCES: Plik zostal podpisany.',
+    bat_fail: 'BLAD: Podpisanie nie powiodlo sie.',
+    ps1_header: '# SignTool GUI - wygenerowano automatycznie',
+    ps1_signing: 'Podpisywanie pliku...',
+    ps1_success: 'SUKCES!', ps1_fail: 'BLAD!',
+    bat_file: 'podpisz.bat', ps1_file: 'podpisz.ps1',
+    toast_copied: 'Skopiowano do schowka!',
+    toast_bat: 'Plik .bat gotowy!',
+    toast_ps1: 'Plik .ps1 gotowy!',
+    toast_cleared: 'Formularz wyczyszczony',
+  },
+  en: {
+    subtitle: 'Graphical interface for signtool.exe · Windows Code Signing',
+    tab_sign: 'Sign file',
+    tab_verify: 'Verify',
+    tab_timestamp: 'Timestamp',
+    pt_file_cert: 'File & Certificate',
+    lbl_file_sign: 'File to sign',
+    lbl_cert: 'Certificate (.pfx)',
+    hint_cert: 'or use Windows Certificate Store',
+    lbl_pass: 'PFX Password',
+    pass_placeholder: 'password (leave empty if none)',
+    pt_signtool_path: 'Path to signtool.exe',
+    hint_signtool_path: 'e.g. "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\x64\\signtool.exe"',
+    pt_sig_info: 'Signature Information',
+    lbl_desc: 'Program description (company/product name)',
+    desc_placeholder: 'e.g. polsoft.ITS™',
+    hint_desc: 'Shown in UAC dialog and signature details',
+    lbl_url: 'Description URL (publisher website)',
+    lbl_algo: 'Hash algorithm',
+    opt_sha256: 'SHA-256 (recommended)',
+    opt_sha1: 'SHA-1 (deprecated)',
+    lbl_tsa: 'Timestamp server (TSA)',
+    opt_tsa_custom: 'Custom...',
+    chk_dual: 'Dual signing (SHA-1 + SHA-256) — Windows 7 compatibility',
+    chk_rfcs: 'Use RFC 3161 for timestamp (/tr instead of /t)',
+    chk_verbose: 'Verbose mode (/v)',
+    chk_debug: 'Debug mode (/debug)',
+    cmd_title_sign: '⌨ Generated command',
+    btn_copy_sign: '📋 Copy command',
+    btn_bat: '💾 Save as .bat',
+    btn_ps1: '🔷 Save as .ps1',
+    btn_clear: '🗑 Clear',
+    pt_verify: 'Signature Verification',
+    lbl_file_verify: 'File to verify',
+    chk_v_all: 'Verify all signatures (/all)',
+    chk_v_pa: 'Apply Authenticode policy (/pa)',
+    chk_v_verbose: 'Verbose mode (/v)',
+    pt_tool_path_v: 'Tool path',
+    cmd_title_verify: '⌨ Verification command',
+    btn_copy_verify: '📋 Copy',
+    pt_ts: 'Add Timestamp',
+    lbl_file_ts: 'File',
+    lbl_ts_server: 'TSA Server',
+    lbl_ts_algo: 'Algorithm',
+    lbl_ts_signtool: 'Path to signtool.exe',
+    cmd_title_ts: '⌨ Timestamp command',
+    btn_copy_ts: '📋 Copy',
+    browse: '📂 Browse',
+    cmd_placeholder: '← Fill in the fields above, command will appear here',
+    cmd_placeholder_short: '← Fill in the fields above',
+    file_placeholder: 'YOUR_FILE.exe',
+    pick_prompt: (ext) => `Enter path to .${ext} file:`,
+    dual_step1: ':: === Step 1: SHA-1 signing ===',
+    dual_step2: ':: === Step 2: Adding SHA-256 signature (dual sign) ===',
+    bat_header: 'Signing file...',
+    bat_success: 'SUCCESS: File has been signed.',
+    bat_fail: 'ERROR: Signing failed.',
+    ps1_header: '# SignTool GUI - auto-generated',
+    ps1_signing: 'Signing file...',
+    ps1_success: 'SUCCESS!', ps1_fail: 'ERROR!',
+    bat_file: 'sign.bat', ps1_file: 'sign.ps1',
+    toast_copied: 'Copied to clipboard!',
+    toast_bat: 'File .bat ready!',
+    toast_ps1: 'File .ps1 ready!',
+    toast_cleared: 'Form cleared',
+  }
+};
+
+let lang = 'pl';
+let S = STRINGS.pl;
+
+// ─── Apply language ─────────────────────────────────────────────────────────
+function applyLang() {
+  S = STRINGS[lang];
+  document.documentElement.lang = lang;
+  document.getElementById('subtitle').textContent = S.subtitle;
+
+  // Tabs
+  document.getElementById('tab-btn-sign').textContent = S.tab_sign;
+  document.getElementById('tab-btn-verify').textContent = S.tab_verify;
+  document.getElementById('tab-btn-timestamp').textContent = S.tab_timestamp;
+
+  // Sign panel
+  set('pt-file-cert', S.pt_file_cert);
+  set('lbl-file-sign', S.lbl_file_sign);
+  set('hint-cert', S.hint_cert);
+  set('lbl-cert', S.lbl_cert);
+  set('lbl-pass', S.lbl_pass);
+  ph('s-pass', S.pass_placeholder);
+  ph('s-file', 'C:\\path\\to\\file.exe');
+  ph('s-cert', 'C:\\certificate.pfx');
+  set('pt-signtool-path', S.pt_signtool_path);
+  set('hint-signtool-path', S.hint_signtool_path);
+  set('pt-sig-info', S.pt_sig_info);
+  set('lbl-desc', S.lbl_desc);
+  ph('s-desc', S.desc_placeholder);
+  set('hint-desc', S.hint_desc);
+  set('lbl-url', S.lbl_url);
+  set('lbl-algo', S.lbl_algo);
+  set('opt-sha256', S.opt_sha256);
+  set('opt-sha1', S.opt_sha1);
+  set('lbl-tsa', S.lbl_tsa);
+  set('opt-tsa-custom', S.opt_tsa_custom);
+  set('chk-dual', S.chk_dual);
+  set('chk-rfcs', S.chk_rfcs);
+  set('chk-verbose', S.chk_verbose);
+  set('chk-debug', S.chk_debug);
+  set('cmd-title-sign', S.cmd_title_sign);
+  set('btn-copy-sign', S.btn_copy_sign);
+  set('btn-bat', S.btn_bat);
+  set('btn-ps1', S.btn_ps1);
+  set('btn-clear', S.btn_clear);
+
+  // Verify panel
+  set('pt-verify', S.pt_verify);
+  set('lbl-file-verify', S.lbl_file_verify);
+  set('chk-v-all', S.chk_v_all);
+  set('chk-v-pa', S.chk_v_pa);
+  set('chk-v-verbose', S.chk_v_verbose);
+  set('pt-tool-path-v', S.pt_tool_path_v);
+  set('cmd-title-verify', S.cmd_title_verify);
+  set('btn-copy-verify', S.btn_copy_verify);
+
+  // Timestamp panel
+  set('pt-ts', S.pt_ts);
+  set('lbl-file-ts', S.lbl_file_ts);
+  set('lbl-ts-server', S.lbl_ts_server);
+  set('lbl-ts-algo', S.lbl_ts_algo);
+  set('lbl-ts-signtool', S.lbl_ts_signtool);
+  set('cmd-title-ts', S.cmd_title_ts);
+  set('btn-copy-ts', S.btn_copy_ts);
+
+  // Browse buttons
+  document.querySelectorAll('.btn-browse[id]').forEach(btn => btn.textContent = S.browse);
+
+  // Command placeholders (only if not yet generated)
+  if (document.getElementById('cmdOutput').textContent === STRINGS[lang === 'pl' ? 'en' : 'pl'].cmd_placeholder ||
+      document.getElementById('cmdOutput').textContent === '') {
+    document.getElementById('cmdOutput').textContent = S.cmd_placeholder;
+  }
+  ['cmdOutputVerify','cmdOutputTs'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el.textContent === STRINGS[lang === 'pl' ? 'en' : 'pl'].cmd_placeholder_short || el.textContent === '')
+      el.textContent = S.cmd_placeholder_short;
+  });
+
+  buildCmd();
+  buildCmdVerify();
+  buildCmdTs();
+}
+
+function set(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function ph(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.placeholder = text;
+}
+
+function setLang(newLang, btn) {
+  lang = newLang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyLang();
+}
+
+// ─── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function chk(id) { const el = document.getElementById(id); return el ? el.checked : false; }
+
+// ─── Command builders ────────────────────────────────────────────────────────
+function buildCmd() {
+  const signtool = v('s-signtool') || 'signtool.exe';
+  const file = v('s-file');
+  const cert = v('s-cert');
+  const pass = v('s-pass');
+  const desc = v('s-desc');
+  const url  = v('s-url');
+  const algo = v('s-algo');
+  const rfcs = chk('s-rfcs');
+  const dual = chk('s-dual');
+  const verbose = chk('s-verbose');
+  const dbg = chk('s-debug');
+  const fp = S.file_placeholder;
+
+  const tsaSel = document.getElementById('s-tsa');
+  const tsa = tsaSel.value === 'custom' ? v('s-tsa-custom') : tsaSel.value;
+
+  function single(algoOvr) {
+    const a = algoOvr || algo;
+    let c = `"${signtool}" sign`;
+    if (cert) c += ` /f "${cert}"`;
+    if (pass) c += ` /p "${pass}"`;
+    c += ` /fd ${a}`;
+    if (tsa) { if (rfcs) c += ` /tr "${tsa}" /td ${a}`; else c += ` /t "${tsa}"`; }
+    if (desc) c += ` /d "${desc}"`;
+    if (url)  c += ` /du "${url}"`;
+    if (verbose) c += ' /v';
+    if (dbg) c += ' /debug';
+    c += `\n    "${file || fp}"`;
+    return c;
+  }
+
+  let out;
+  if (dual) {
+    out = S.dual_step1 + '\n' + single('sha1') + '\n\n';
+    out += S.dual_step2 + '\n';
+    let c2 = `"${signtool}" sign /as`;
+    if (cert) c2 += ` /f "${cert}"`;
+    if (pass) c2 += ` /p "${pass}"`;
+    c2 += ` /fd ${algo}`;
+    if (tsa) { if (rfcs) c2 += ` /tr "${tsa}" /td ${algo}`; else c2 += ` /t "${tsa}"`; }
+    if (desc) c2 += ` /d "${desc}"`;
+    if (url)  c2 += ` /du "${url}"`;
+    if (verbose) c2 += ' /v';
+    c2 += `\n    "${file || fp}"`;
+    out += c2;
+  } else {
+    out = single();
+  }
+  document.getElementById('cmdOutput').textContent = out;
+}
+
+function updateTsaInput() {
+  const sel = document.getElementById('s-tsa');
+  document.getElementById('s-tsa-custom').style.display = sel.value === 'custom' ? 'block' : 'none';
+  buildCmd();
+}
+
+function buildCmdVerify() {
+  const signtool = v('v-signtool') || 'signtool.exe';
+  const file = v('v-file');
+  let c = `"${signtool}" verify`;
+  if (chk('v-all')) c += ' /all';
+  if (chk('v-pa'))  c += ' /pa';
+  if (chk('v-verbose')) c += ' /v';
+  c += `\n    "${file || S.file_placeholder}"`;
+  document.getElementById('cmdOutputVerify').textContent = c;
+}
+
+function buildCmdTs() {
+  const signtool = v('t-signtool') || 'signtool.exe';
+  const file = v('t-file');
+  const tsa  = v('t-tsa') || 'http://timestamp.digicert.com';
+  const algo = v('t-algo');
+  let c = `"${signtool}" timestamp /tr "${tsa}" /td ${algo}`;
+  c += `\n    "${file || S.file_placeholder}"`;
+  document.getElementById('cmdOutputTs').textContent = c;
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+function getCmd(id = 'cmdOutput') { return document.getElementById(id).textContent; }
+function copyCmd() { copyCmdById('cmdOutput'); }
+function copyCmdById(id) {
+  navigator.clipboard.writeText(getCmd(id)).then(() => showToast(S.toast_copied, 'success'));
+}
+
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function exportBat() {
+  const cmd = getCmd();
+  const content = `@echo off\necho ${S.bat_header}\n${cmd.replace(/^::/gm, 'REM')}\necho.\nif %errorlevel%==0 (echo ${S.bat_success}) else (echo ${S.bat_fail})\npause`;
+  downloadFile(S.bat_file, content);
+  showToast(S.toast_bat, 'success');
+}
+
+function exportPs1() {
+  const cmd = getCmd();
+  const lines = cmd.split('\n').filter(l => !l.startsWith('::')).join('\n');
+  const content = `${S.ps1_header}\nWrite-Host "${S.ps1_signing}" -ForegroundColor Cyan\n${lines}\nif ($LASTEXITCODE -eq 0) { Write-Host "${S.ps1_success}" -ForegroundColor Green } else { Write-Host "${S.ps1_fail}" -ForegroundColor Red }`;
+  downloadFile(S.ps1_file, content);
+  showToast(S.toast_ps1, 'success');
+}
+
+function downloadFile(name, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type: 'text/plain'}));
+  a.download = name; a.click();
+}
+
+function clearAll() {
+  ['s-file','s-cert','s-pass','s-desc','s-url'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['s-dual','s-verbose','s-debug'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+  document.getElementById('s-rfcs').checked = true;
+  document.getElementById('s-algo').value = 'sha256';
+  document.getElementById('s-tsa').selectedIndex = 0;
+  document.getElementById('s-tsa-custom').style.display = 'none';
+  buildCmd();
+  showToast(S.toast_cleared, 'info');
+}
+
+function pickFile(targetId, ext) {
+  const name = prompt(S.pick_prompt(ext));
+  if (name) {
+    document.getElementById(targetId).value = name;
+    buildCmd(); buildCmdVerify(); buildCmdTs();
+  }
+}
+
+// ─── pywebview API – auto-fill signtool.exe path ────────────────────────────
+function autoFillSigntoolPath() {
+  if (window.pywebview && window.pywebview.api) {
+    window.pywebview.api.get_signtool_path().then(function(path) {
+      if (path) {
+        // Normalize backslashes for display
+        const normalized = path.replace(/\//g, '\\');
+        ['s-signtool', 'v-signtool', 't-signtool'].forEach(function(id) {
+          const el = document.getElementById(id);
+          if (el && (!el.value || el.value === 'signtool.exe')) {
+            el.value = normalized;
+          }
+        });
+        buildCmd();
+        buildCmdVerify();
+        buildCmdTs();
+      }
+    }).catch(function() {});
+  }
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+applyLang();
+
+// Wait for pywebview to be ready, then auto-fill signtool path
+window.addEventListener('pywebviewready', autoFillSigntoolPath);
+// Fallback: try after short delay (handles slower init)
+setTimeout(autoFillSigntoolPath, 800);
+</script>
+</body>
+</html>
